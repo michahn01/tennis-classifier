@@ -20,7 +20,7 @@ class TennisDataset(Dataset):
         "smash": ["smash"]
     }
 
-    def __init__(self, root_dir, split='train', num_frames=32, transform=None):
+    def __init__(self, root_dir, split='train', num_frames=32, transform=None, experts_only=True):
         """
         Args:
             root_dir (str): Path to the VIDEO_RGB directory.
@@ -32,6 +32,7 @@ class TennisDataset(Dataset):
         self.split = split
         self.num_frames = num_frames
         self.transform = transform
+        self.experts_only = experts_only
         
         self.classes = list(self.CLASS_MAPPING.keys())
         self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
@@ -60,13 +61,27 @@ class TennisDataset(Dataset):
             
             files = sorted([f for f in os.listdir(subdir_path) if f.endswith(('.mp4', '.avi', '.mov'))])
             
+            files = sorted([f for f in os.listdir(subdir_path) if f.endswith(('.mp4', '.avi', '.mov'))])
+            
+            if self.experts_only:
+                # Filter for experts only (p32-p55)
+                expert_files = []
+                for f in files:
+                    # Filename format: pXX_...
+                    try:
+                        player_id_str = f.split('_')[0]
+                        if player_id_str.startswith('p'):
+                            player_id = int(player_id_str[1:])
+                            if 32 <= player_id <= 55:
+                                expert_files.append(f)
+                    except ValueError:
+                        continue
+                
+                files = expert_files
+
             # Simple split logic based on file index (e.g., 80/10/10)
             # Since we don't have explicit split files, we'll hash the filename or just use index
             # Using a deterministic shuffle based on filename could be better, but let's stick to simple index for now
-            # Actually, the overview mentions p1-p31 beginners, p32-p55 experts. 
-            # But the filenames might not strictly follow pXX. 
-            # Let's use a simple random split with seed for reproducibility if needed, 
-            # or just split by file list index for simplicity as a starting point.
             
             # Let's use a deterministic split based on sorting
             num_files = len(files)
