@@ -35,12 +35,12 @@ def train(args):
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
     
     # Model
-    model = TennisClassifier(num_classes=6, lstm_hidden_size=args.hidden_size, lstm_layers=args.lstm_layers)
+    model = TennisClassifier(num_classes=6, lstm_hidden_size=args.hidden_size, lstm_layers=args.lstm_layers, dropout=args.dropout)
     model = model.to(device)
     
     # Loss and Optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     
     # Training Loop
     best_val_acc = 0.0
@@ -105,13 +105,15 @@ def train(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train Tennis Classifier')
     parser.add_argument('--data_dir', type=str, default='data/VIDEO_RGB', help='Path to data directory')
-    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs')
-    parser.add_argument('--batch_size', type=int, default=4, help='Batch size')
+    parser.add_argument('--epochs', type=int, default=300, help='Number of epochs')
+    parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--num_frames', type=int, default=32, help='Number of frames per video')
-    parser.add_argument('--hidden_size', type=int, default=256, help='LSTM hidden size')
+    parser.add_argument('--hidden_size', type=int, default=128, help='LSTM hidden size')
     parser.add_argument('--lstm_layers', type=int, default=1, help='Number of LSTM layers')
-    parser.add_argument('--num_workers', type=int, default=0, help='Number of data loading workers')
+    parser.add_argument('--dropout', type=float, default=0.3, help='Dropout probability')
+    parser.add_argument('--weight_decay', type=float, default=1e-4, help='Weight decay')
+    parser.add_argument('--num_workers', type=int, default=8, help='Number of data loading workers')
     parser.add_argument('--checkpoint_dir', type=str, default='.', help='Directory to save checkpoints')
     
     args = parser.parse_args()

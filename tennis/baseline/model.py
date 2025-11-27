@@ -38,7 +38,7 @@ class TennisClassifier(nn.Module):
     
     Classes: backhand, forehand, service, bvolley, fvolley, smash
     """
-    def __init__(self, num_classes=6, lstm_hidden_size=256, lstm_layers=1):
+    def __init__(self, num_classes=6, lstm_hidden_size=256, lstm_layers=1, dropout=0.0):
         """
         Initialize the baseline model.
         
@@ -46,6 +46,7 @@ class TennisClassifier(nn.Module):
             num_classes (int): Number of stroke classes (default: 6)
             lstm_hidden_size (int): Dimension of LSTM hidden state (default: 256)
             lstm_layers (int): Number of LSTM layers (default: 1)
+            dropout (float): Dropout probability (default: 0.0)
         """
         super(TennisClassifier, self).__init__()
         
@@ -84,7 +85,8 @@ class TennisClassifier(nn.Module):
             input_size=self.feature_dim,
             hidden_size=lstm_hidden_size,
             num_layers=lstm_layers,
-            batch_first=True
+            batch_first=True,
+            dropout=dropout,
         )
         
         # ====================================================================
@@ -93,6 +95,7 @@ class TennisClassifier(nn.Module):
         # Final fully connected layer maps LSTM hidden state to class logits
         # Input: LSTM hidden state (256-dim)
         # Output: Class logits (6 classes)
+        self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(lstm_hidden_size, num_classes)
         
     def forward(self, x):
@@ -178,7 +181,7 @@ class TennisClassifier(nn.Module):
         # ====================================================================
         # Map the video representation to class logits
         # The FC layer learns to associate video features with stroke types
-        logits = self.fc(last_hidden)
+        logits = self.fc(self.dropout(last_hidden))
         # Shape: (B, 6) - One set of logits per video
 
         
