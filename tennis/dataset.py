@@ -68,9 +68,7 @@ class TennisDataset(Dataset):
             class_idx = self.class_to_idx[target_class]
             
             files = sorted([f for f in os.listdir(subdir_path) if f.endswith(('.mp4', '.avi', '.mov'))])
-            
-            files = sorted([f for f in os.listdir(subdir_path) if f.endswith(('.mp4', '.avi', '.mov'))])
-            
+
             if self.experts_only:
                 # Filter for experts only (p32-p55)
                 expert_files = []
