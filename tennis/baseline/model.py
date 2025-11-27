@@ -154,6 +154,10 @@ class TennisClassifier(nn.Module):
         # Process the sequence of frame features through LSTM
         # LSTM maintains hidden state that accumulates information over time
 
+        # Apply dropout to the input features of the LSTM
+        # This allows for regularization even if num_layers=1
+        features = self.dropout(features)
+
         # out: (B, T, H), (h_n, c_n)
         lstm_out, (h_n, c_n) = self.lstm(features)
         # lstm_out: (B, T, H) - Hidden state at each time step
