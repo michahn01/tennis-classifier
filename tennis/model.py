@@ -15,8 +15,8 @@ class TennisClassifier(nn.Module):
         self.resnet = nn.Sequential(*modules)
         
         # Freeze ResNet params (optional, but good for baseline)
-        # for param in self.resnet.parameters():
-        #     param.requires_grad = False
+        r param in self.resnet.parameteters():
+            param.requires_grad = False
             
         self.feature_dim = 2048
         

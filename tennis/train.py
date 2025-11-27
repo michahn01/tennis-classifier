@@ -115,7 +115,7 @@ if __name__ == "__main__":
     parser.add_argument('--data_dir', type=str, default='data/VIDEO_RGB', help='Path to data directory')
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs')
     parser.add_argument('--batch_size', type=int, default=4, help='Batch size')
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--num_frames', type=int, default=32, help='Number of frames per video')
     parser.add_argument('--hidden_size', type=int, default=256, help='LSTM hidden size')
     parser.add_argument('--lstm_layers', type=int, default=1, help='Number of LSTM layers')
