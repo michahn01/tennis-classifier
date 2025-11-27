@@ -3,12 +3,14 @@ name = "tennis"
 version = "0.1.0"
 description = "Tennis stroke classification"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "pandas",
     "numpy",
     "scikit-learn",
     "torch",
+    "torchvision",
+    "opencv-python",
 ]
 
 [project.optional-dependencies]
