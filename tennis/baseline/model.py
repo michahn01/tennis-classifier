@@ -86,7 +86,7 @@ class TennisClassifier(nn.Module):
             hidden_size=lstm_hidden_size,
             num_layers=lstm_layers,
             batch_first=True,
-            dropout=dropout,
+            dropout=dropout if lstm_layers > 1 else 0.0
         )
         
         # ====================================================================
