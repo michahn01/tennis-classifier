@@ -2,6 +2,9 @@ import os
 import cv2
 import torch
 import numpy as np
+import tempfile
+import shutil
+import hashlib
 from torch.utils.data import Dataset
 from torchvision import transforms
 
@@ -38,6 +41,11 @@ class TennisDataset(Dataset):
         self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
         
         self.samples = self._load_samples()
+
+        # Caching
+        self.cache_dir = tempfile.mkdtemp()
+        self.main_pid = os.getpid()
+        print(f"Dataset cache directory: {self.cache_dir}")
 
     def _load_samples(self):
         samples = []
@@ -111,14 +119,42 @@ class TennisDataset(Dataset):
 
     def __getitem__(self, idx):
         video_path, label = self.samples[idx]
-        frames = self._load_video(video_path)
+        
+        # Generate cache path
+        # Use MD5 of the video path to ensure uniqueness
+        video_hash = hashlib.md5(video_path.encode('utf-8')).hexdigest()
+        cache_path = os.path.join(self.cache_dir, f"{video_hash}.pt")
+        
+        if os.path.exists(cache_path):
+            try:
+                frames = torch.load(cache_path)
+            except Exception as e:
+                # If loading fails, re-process
+                print(f"Failed to load cache for {video_path}: {e}")
+                frames = self._load_video(video_path)
+                torch.save(frames, cache_path)
+        else:
+            frames = self._load_video(video_path)
+            # Save to cache
+            torch.save(frames, cache_path)
         
         if self.transform:
             # Apply transform to each frame
-            # frames is (T, H, W, C) -> (T, C, H, W) for torch
+            # frames is (T, C, H, W) for torch
             frames = self.transform(frames)
             
         return frames, label
+
+    def __del__(self):
+        # Clean up cache directory
+        # Only the process that created it should clean it up
+        if hasattr(self, 'cache_dir') and os.path.exists(self.cache_dir):
+            if os.getpid() == self.main_pid:
+                try:
+                    shutil.rmtree(self.cache_dir)
+                    print(f"Cleaned up dataset cache: {self.cache_dir}")
+                except Exception as e:
+                    print(f"Error cleaning up cache: {e}")
 
     def _load_video(self, path):
         cap = cv2.VideoCapture(path)
