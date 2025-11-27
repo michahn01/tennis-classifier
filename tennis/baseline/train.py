@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from tennis.dataset import TennisDataset
-from tennis.model import TennisClassifier
+from tennis.baseline.model import TennisClassifier
 
 def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,14 +81,6 @@ def train(args):
         val_total = 0
         
         with torch.no_grad():
-            for inputs, labels in enumerate(val_loader):
-                # Unpack tuple correctly: enumerate returns (index, data)
-                # But DataLoader yields (inputs, labels)
-                # So inputs here is actually index, and labels is (inputs, labels) tuple?
-                # Wait, enumerate(loader) yields (i, batch). batch is (inputs, labels).
-                # So: for i, (inputs, labels) in enumerate(val_loader):
-                pass
-            
             # Correct loop:
             for inputs, labels in val_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
