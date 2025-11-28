@@ -13,14 +13,15 @@ def train(args):
     print(f"Using device: {device}")
 
     # Datasets
-    train_dataset = TennisDataset(args.data_dir, split='train', num_frames=args.num_frames, feature_dir=args.feature_dir, experts_only=True)
-    val_dataset = TennisDataset(args.data_dir, split='val', num_frames=args.num_frames, feature_dir=args.feature_dir, experts_only=True)
+    # Note: TennisDataset now expects feature_dir and split
+    train_dataset = TennisDataset(args.feature_dir, split='train')
+    val_dataset = TennisDataset(args.feature_dir, split='val')
     
     print(f"Train samples: {len(train_dataset)}")
     print(f"Val samples: {len(val_dataset)}")
     
     if len(train_dataset) == 0:
-        print("No training data found.")
+        print("No training data found. Please run extract_features.py first.")
         return
 
     # DataLoaders
@@ -95,6 +96,7 @@ def train(args):
         
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+            os.makedirs(args.checkpoint_dir, exist_ok=True)
             torch.save(model.state_dict(), os.path.join(args.checkpoint_dir, 'best_model.pth'))
             print("Saved best model.")
 
@@ -102,7 +104,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train Tennis Classifier')
     
     # Data arguments
-    parser.add_argument('--data_dir', type=str, default='data/VIDEO_RGB', help='Path to video data')
     parser.add_argument('--feature_dir', type=str, default='data/features', help='Path to pre-extracted features')
     parser.add_argument('--checkpoint_dir', type=str, default='tennis/baseline/models', help='Directory to save checkpoints')
     
@@ -115,10 +116,9 @@ if __name__ == "__main__":
     parser.add_argument('--device', type=str, default=None, help='Device (e.g., cuda:0, cpu)')
 
     # Model arguments
-    parser.add_argument('--num_frames', type=int, default=32, help='Frames per video')
     parser.add_argument('--hidden_size', type=int, default=256, help='LSTM hidden size')
     parser.add_argument('--lstm_layers', type=int, default=1, help='Number of LSTM layers')
     parser.add_argument('--dropout', type=float, default=0.1, help='Dropout probability')
-    
+
     args = parser.parse_args()
     train(args)
