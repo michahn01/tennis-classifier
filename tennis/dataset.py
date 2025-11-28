@@ -23,7 +23,7 @@ class TennisDataset(Dataset):
         "smash": ["smash"]
     }
 
-    def __init__(self, root_dir, split='train', num_frames=32, transform=None, experts_only=True):
+    def __init__(self, root_dir, split='train', num_frames=32, transform=None, experts_only=True, cache_dir=None):
         """
         Args:
             root_dir (str): Path to the VIDEO_RGB directory.
@@ -43,7 +43,14 @@ class TennisDataset(Dataset):
         self.samples = self._load_samples()
 
         # Caching
-        self.cache_dir = tempfile.mkdtemp()
+        if cache_dir:
+            self.cache_dir = cache_dir
+            os.makedirs(self.cache_dir, exist_ok=True)
+            self.cleanup_cache = False # Don't clean up persistent cache
+        else:
+            self.cache_dir = tempfile.mkdtemp()
+            self.cleanup_cache = True
+            
         self.main_pid = os.getpid()
         print(f"Dataset cache directory: {self.cache_dir}")
 
@@ -134,7 +141,12 @@ class TennisDataset(Dataset):
         else:
             frames = self._load_video(video_path)
             # Save to cache
-            torch.save(frames, cache_path)
+            try:
+                torch.save(frames, cache_path)
+            except Exception as e:
+                # If saving fails (e.g. disk full), just continue without caching
+                # We might want to log this but avoid spamming
+                pass
         
         if self.transform:
             # Apply transform to each frame
@@ -147,7 +159,7 @@ class TennisDataset(Dataset):
         # Clean up cache directory
         # Only the process that created it should clean it up
         if hasattr(self, 'cache_dir') and os.path.exists(self.cache_dir):
-            if os.getpid() == self.main_pid:
+            if os.getpid() == self.main_pid and getattr(self, 'cleanup_cache', False):
                 try:
                     shutil.rmtree(self.cache_dir)
                     print(f"Cleaned up dataset cache: {self.cache_dir}")

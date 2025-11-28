@@ -20,8 +20,8 @@ def train(args):
     ])
     
     # Datasets
-    train_dataset = TennisDataset(args.data_dir, split='train', num_frames=args.num_frames, transform=transform)
-    val_dataset = TennisDataset(args.data_dir, split='val', num_frames=args.num_frames, transform=transform)
+    train_dataset = TennisDataset(args.data_dir, split='train', num_frames=args.num_frames, transform=transform, cache_dir=args.cache_dir)
+    val_dataset = TennisDataset(args.data_dir, split='val', num_frames=args.num_frames, transform=transform, cache_dir=args.cache_dir)
     
     print(f"Train samples: {len(train_dataset)}")
     print(f"Val samples: {len(val_dataset)}")
@@ -115,6 +115,7 @@ if __name__ == "__main__":
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='Weight decay')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of data loading workers')
     parser.add_argument('--checkpoint_dir', type=str, default='.', help='Directory to save checkpoints')
+    parser.add_argument('--cache_dir', type=str, default=None, help='Directory to cache processed frames')
     
     args = parser.parse_args()
     train(args)
