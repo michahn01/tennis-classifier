@@ -24,13 +24,6 @@ class TennisDataset(Dataset):
     }
 
     def __init__(self, root_dir, split='train', num_frames=32, transform=None, experts_only=True, cache_dir=None, feature_dir=None):
-        """
-        Args:
-            root_dir (str): Path to the VIDEO_RGB directory.
-            split (str): 'train', 'val', or 'test'.
-            num_frames (int): Number of frames to sample per video.
-            transform (callable, optional): Optional transform to be applied on a sample.
-        """
         self.root_dir = root_dir
         self.split = split
         self.num_frames = num_frames
@@ -48,7 +41,7 @@ class TennisDataset(Dataset):
         if cache_dir:
             self.cache_dir = cache_dir
             os.makedirs(self.cache_dir, exist_ok=True)
-            self.cleanup_cache = False # Don't clean up persistent cache
+            self.cleanup_cache = False
         else:
             self.cache_dir = tempfile.mkdtemp()
             self.cleanup_cache = True
@@ -58,13 +51,11 @@ class TennisDataset(Dataset):
 
     def _load_samples(self):
         samples = []
-        # Reverse mapping to find class for a given subdirectory
         subdir_to_class = {}
         for cls, subdirs in self.CLASS_MAPPING.items():
             for subdir in subdirs:
                 subdir_to_class[subdir] = cls
 
-        # Walk through directories
         for subdir in os.listdir(self.root_dir):
             subdir_path = os.path.join(self.root_dir, subdir)
             if not os.path.isdir(subdir_path):
@@ -82,7 +73,6 @@ class TennisDataset(Dataset):
                 # Filter for experts only (p32-p55)
                 expert_files = []
                 for f in files:
-                    # Filename format: pXX_...
                     try:
                         player_id_str = f.split('_')[0]
                         if player_id_str.startswith('p'):
@@ -91,19 +81,13 @@ class TennisDataset(Dataset):
                                 expert_files.append(f)
                     except ValueError:
                         continue
-                
                 files = expert_files
 
-            # Simple split logic based on file index (e.g., 80/10/10)
-            # Since we don't have explicit split files, we'll hash the filename or just use index
-            # Using a deterministic shuffle based on filename could be better, but let's stick to simple index for now
-            
-            # Let's use a deterministic split based on sorting
             num_files = len(files)
             if num_files == 0:
                 continue
                 
-            # 80% train, 10% val, 10% test
+            # Split: 80% train, 10% val, 10% test
             train_end = int(0.8 * num_files)
             val_end = int(0.9 * num_files)
             
@@ -129,20 +113,16 @@ class TennisDataset(Dataset):
         
         if self.feature_dir:
             # Load pre-extracted features
-            # Construct path: feature_dir/rel_path.pt
-            # video_path is absolute: root_dir/subdir/filename
             rel_path = os.path.relpath(video_path, self.root_dir)
             feature_path = os.path.join(self.feature_dir, os.path.splitext(rel_path)[0] + ".pt")
             
             if not os.path.exists(feature_path):
-                # Fallback or error? For now, error as we expect features to be there
                 raise FileNotFoundError(f"Feature file not found: {feature_path}")
                 
-            features = torch.load(feature_path) # (T, 2048)
+            features = torch.load(feature_path)
             return features, label
 
         # Generate cache path
-        # Use MD5 of the video path to ensure uniqueness
         video_hash = hashlib.md5(video_path.encode('utf-8')).hexdigest()
         cache_path = os.path.join(self.cache_dir, f"{video_hash}.pt")
         
@@ -150,23 +130,17 @@ class TennisDataset(Dataset):
             try:
                 frames = torch.load(cache_path)
             except Exception as e:
-                # If loading fails, re-process
                 print(f"Failed to load cache for {video_path}: {e}")
                 frames = self._load_video(video_path)
                 torch.save(frames, cache_path)
         else:
             frames = self._load_video(video_path)
-            # Save to cache
             try:
                 torch.save(frames, cache_path)
-            except Exception as e:
-                # If saving fails (e.g. disk full), just continue without caching
-                # We might want to log this but avoid spamming
+            except Exception:
                 pass
         
         if self.transform:
-            # Apply transform to each frame
-            # frames is (T, C, H, W) for torch
             frames = self.transform(frames)
             
         if self.return_paths:
@@ -175,8 +149,6 @@ class TennisDataset(Dataset):
         return frames, label
 
     def __del__(self):
-        # Clean up cache directory
-        # Only the process that created it should clean it up
         if hasattr(self, 'cache_dir') and os.path.exists(self.cache_dir):
             if os.getpid() == self.main_pid and getattr(self, 'cleanup_cache', False):
                 try:
@@ -191,10 +163,7 @@ class TennisDataset(Dataset):
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
         if total_frames <= 0:
-            # Fallback or error handling
             cap.release()
-            # Return zeros if video is broken? Or raise error?
-            # Let's return a zero tensor of correct shape to avoid crashing training immediately
             return torch.zeros((self.num_frames, 3, 224, 224)) 
 
         # Uniform sampling
@@ -205,9 +174,7 @@ class TennisDataset(Dataset):
             if not ret:
                 break
             if i in indices:
-                # BGR to RGB
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                # Resize to 224x224
                 frame = cv2.resize(frame, (224, 224))
                 frames.append(frame)
                 if len(frames) == self.num_frames:
@@ -219,15 +186,9 @@ class TennisDataset(Dataset):
         while len(frames) < self.num_frames:
             frames.append(np.zeros((224, 224, 3), dtype=np.uint8))
             
-        frames = np.array(frames) # (T, H, W, C)
+        frames = np.array(frames)
         
-        # Convert to tensor and rearrange to (T, C, H, W)
-        # But usually transforms expect PIL or Tensor (C, H, W)
-        # We will handle this in transform or here.
-        # Let's return (T, C, H, W) float tensor normalized to [0, 1] if no transform provided
-        # But standard torchvision transforms expect (C, H, W).
-        
-        # Let's keep it simple: return (T, C, H, W) tensor
+        # Return (T, C, H, W) tensor
         frames = torch.from_numpy(frames).permute(0, 3, 1, 2).float() / 255.0
         
         return frames

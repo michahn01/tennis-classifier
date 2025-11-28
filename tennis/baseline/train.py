@@ -9,15 +9,10 @@ from tennis.dataset import TennisDataset
 from tennis.baseline.model import TennisClassifier
 
 def train(args):
-    if args.device:
-        device = torch.device(args.device)
-    else:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
     print(f"Using device: {device}")
 
     # Datasets
-    # No transforms needed for pre-extracted features
-    # Note: experts_only=True to match the feature extraction step
     train_dataset = TennisDataset(args.data_dir, split='train', num_frames=args.num_frames, feature_dir=args.feature_dir, experts_only=True)
     val_dataset = TennisDataset(args.data_dir, split='val', num_frames=args.num_frames, feature_dir=args.feature_dir, experts_only=True)
     
@@ -25,7 +20,7 @@ def train(args):
     print(f"Val samples: {len(val_dataset)}")
     
     if len(train_dataset) == 0:
-        print("No training data found. Check data directory.")
+        print("No training data found.")
         return
 
     # DataLoaders
@@ -39,15 +34,11 @@ def train(args):
         lstm_hidden_size=args.hidden_size, 
         lstm_layers=args.lstm_layers, 
         dropout=args.dropout
-    )
-    model = model.to(device)
+    ).to(device)
     
-    # Loss and Optimizer
-    # Model returns probabilities. We need NLLLoss on log(probs).
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     
-    # Training Loop
     best_val_acc = 0.0
     
     for epoch in range(args.epochs):
@@ -60,14 +51,10 @@ def train(args):
             inputs, labels = inputs.to(device), labels.to(device)
             
             optimizer.zero_grad()
-            
-            # outputs: (B, 6) probabilities
             outputs = model(inputs)
             
-            # Calculate loss
             # Add epsilon for numerical stability
-            log_probs = torch.log(outputs + 1e-8)
-            loss = criterion(log_probs, labels)
+            loss = criterion(torch.log(outputs + 1e-8), labels)
             
             loss.backward()
             optimizer.step()
@@ -95,8 +82,7 @@ def train(args):
                 inputs, labels = inputs.to(device), labels.to(device)
                 
                 outputs = model(inputs)
-                log_probs = torch.log(outputs + 1e-8)
-                loss = criterion(log_probs, labels)
+                loss = criterion(torch.log(outputs + 1e-8), labels)
                 
                 val_loss += loss.item()
                 _, predicted = torch.max(outputs.data, 1)
@@ -113,20 +99,26 @@ def train(args):
             print("Saved best model.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train Tennis Classifier (Revamped)')
-    parser.add_argument('--data_dir', type=str, default='data/VIDEO_RGB', help='Path to data directory')
-    parser.add_argument('--feature_dir', type=str, default='data/features', help='Path to features directory')
-    parser.add_argument('--epochs', type=int, default=300, help='Number of epochs')
+    parser = argparse.ArgumentParser(description='Train Tennis Classifier')
+    
+    # Data arguments
+    parser.add_argument('--data_dir', type=str, default='data/VIDEO_RGB', help='Path to video data')
+    parser.add_argument('--feature_dir', type=str, default='data/features', help='Path to pre-extracted features')
+    parser.add_argument('--checkpoint_dir', type=str, default='tennis/baseline/models', help='Directory to save checkpoints')
+    
+    # Training arguments
+    parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate') # Reduced LR for fine-tuning/LSTM
-    parser.add_argument('--num_frames', type=int, default=32, help='Number of frames per video')
-    parser.add_argument('--hidden_size', type=int, default=256, help='LSTM hidden size') # Match LRCNN default
-    parser.add_argument('--lstm_layers', type=int, default=1, help='Number of LSTM layers')
-    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout probability') # Match LRCNN default
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='Weight decay')
-    parser.add_argument('--num_workers', type=int, default=8, help='Number of data loading workers')
-    parser.add_argument('--checkpoint_dir', type=str, default='.', help='Directory to save checkpoints')
-    parser.add_argument('--device', type=str, default=None, help='Device to use (e.g., cuda:0, cpu).')
+    parser.add_argument('--num_workers', type=int, default=8, help='Data loading workers')
+    parser.add_argument('--device', type=str, default=None, help='Device (e.g., cuda:0, cpu)')
+
+    # Model arguments
+    parser.add_argument('--num_frames', type=int, default=32, help='Frames per video')
+    parser.add_argument('--hidden_size', type=int, default=256, help='LSTM hidden size')
+    parser.add_argument('--lstm_layers', type=int, default=1, help='Number of LSTM layers')
+    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout probability')
     
     args = parser.parse_args()
     train(args)
