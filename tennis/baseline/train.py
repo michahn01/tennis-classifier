@@ -10,7 +10,10 @@ from tennis.dataset import TennisDataset
 from tennis.baseline.model import TennisClassifier
 
 def train(args):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.device:
+        device = torch.device(args.device)
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
     # Transforms
@@ -117,6 +120,7 @@ if __name__ == "__main__":
     parser.add_argument('--checkpoint_dir', type=str, default='.', help='Directory to save checkpoints')
     parser.add_argument('--cache_dir', type=str, default=None, help='Directory to cache processed frames')
     parser.add_argument('--pooling', type=str, default='mean', choices=['last', 'mean'], help='Pooling strategy: last or mean')
+    parser.add_argument('--device', type=str, default=None, help='Device to use (e.g., cuda:0, cpu). If not specified, uses cuda if available.')
     
     args = parser.parse_args()
     train(args)
