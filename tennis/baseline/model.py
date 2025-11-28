@@ -38,7 +38,7 @@ class TennisClassifier(nn.Module):
     
     Classes: backhand, forehand, service, bvolley, fvolley, smash
     """
-    def __init__(self, num_classes=6, lstm_hidden_size=256, lstm_layers=1, dropout=0.0):
+    def __init__(self, num_classes=6, lstm_hidden_size=256, lstm_layers=1, dropout=0.0, pooling='mean'):
         """
         Initialize the baseline model.
         
@@ -47,8 +47,12 @@ class TennisClassifier(nn.Module):
             lstm_hidden_size (int): Dimension of LSTM hidden state (default: 256)
             lstm_layers (int): Number of LSTM layers (default: 1)
             dropout (float): Dropout probability (default: 0.0)
+            pooling (str): Pooling strategy for classification ('last' or 'mean'). 
+                           'last' uses the final hidden state.
+                           'mean' averages logits across all time steps.
         """
         super(TennisClassifier, self).__init__()
+        self.pooling = pooling
         
         # ====================================================================
         # STEP 1: ResNet50 Feature Extractor
@@ -167,26 +171,35 @@ class TennisClassifier(nn.Module):
 
 
         # ====================================================================
-        # Extract Video Representation
+        # Extract Video Representation & Classification
         # ====================================================================
-        # For baseline, we use the last hidden state from the top LSTM layer
-        # This represents the entire video sequence in a single vector
-        # h_n shape: (num_layers, B, H)
-        # h_n[-1] gets the last layer: (B, H)
-
-        # Use the last hidden state
-        # h_n shape: (num_layers, B, H)
-        last_hidden = h_n[-1] # (B, H)
-        # Shape: (B, 256) - One vector per video representing the entire sequence
-
         
-        # ====================================================================
-        # Classification
-        # ====================================================================
-        # Map the video representation to class logits
-        # The FC layer learns to associate video features with stroke types
-        logits = self.fc(self.dropout(last_hidden))
-        # Shape: (B, 6) - One set of logits per video
+        if self.pooling == 'mean':
+            # Apply classifier to ALL time steps
+            # lstm_out: (B, T, H)
+            # logits_seq: (B, T, num_classes)
+            logits_seq = self.fc(self.dropout(lstm_out))
+            
+            # Average logits across time
+            # logits: (B, num_classes)
+            logits = torch.mean(logits_seq, dim=1)
+            
+        else: # 'last'
+            # For baseline, we use the last hidden state from the top LSTM layer
+            # This represents the entire video sequence in a single vector
+            # h_n shape: (num_layers, B, H)
+            # h_n[-1] gets the last layer: (B, H)
+
+            # Use the last hidden state
+            # h_n shape: (num_layers, B, H)
+            last_hidden = h_n[-1] # (B, H)
+            # Shape: (B, 256) - One vector per video representing the entire sequence
+
+            
+            # Map the video representation to class logits
+            # The FC layer learns to associate video features with stroke types
+            logits = self.fc(self.dropout(last_hidden))
+            # Shape: (B, 6) - One set of logits per video
 
         
         return logits

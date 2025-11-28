@@ -35,7 +35,7 @@ def train(args):
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
     
     # Model
-    model = TennisClassifier(num_classes=6, lstm_hidden_size=args.hidden_size, lstm_layers=args.lstm_layers, dropout=args.dropout)
+    model = TennisClassifier(num_classes=6, lstm_hidden_size=args.hidden_size, lstm_layers=args.lstm_layers, dropout=args.dropout, pooling=args.pooling)
     model = model.to(device)
     
     # Loss and Optimizer
@@ -116,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', type=int, default=8, help='Number of data loading workers')
     parser.add_argument('--checkpoint_dir', type=str, default='.', help='Directory to save checkpoints')
     parser.add_argument('--cache_dir', type=str, default=None, help='Directory to cache processed frames')
+    parser.add_argument('--pooling', type=str, default='last', choices=['last', 'mean'], help='Pooling strategy: last or mean')
     
     args = parser.parse_args()
     train(args)
