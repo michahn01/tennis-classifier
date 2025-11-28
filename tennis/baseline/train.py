@@ -56,6 +56,7 @@ def train(args):
     )
 
     best_val_acc = 0.0
+    best_val_loss = float("inf")
 
     for epoch in range(args.epochs):
         model.train()
@@ -117,11 +118,20 @@ def train(args):
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+            best_val_loss = val_loss
             os.makedirs(args.checkpoint_dir, exist_ok=True)
             torch.save(
                 model.state_dict(), os.path.join(args.checkpoint_dir, "best_model.pth")
             )
             print("Saved best model.")
+
+    print("-" * 30)
+    print("Best Model Validation Statistics:")
+    print(f"Loss: {best_val_loss:.4f}")
+    print(f"Accuracy: {best_val_acc:.2f}%")
+    print("-" * 30)
+
+    return best_val_acc
 
 
 if __name__ == "__main__":
