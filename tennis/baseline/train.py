@@ -116,7 +116,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', type=int, default=8, help='Number of data loading workers')
     parser.add_argument('--checkpoint_dir', type=str, default='.', help='Directory to save checkpoints')
     parser.add_argument('--cache_dir', type=str, default=None, help='Directory to cache processed frames')
-    parser.add_argument('--pooling', type=str, default='last', choices=['last', 'mean'], help='Pooling strategy: last or mean')
+    parser.add_argument('--pooling', type=str, default='mean', choices=['last', 'mean'], help='Pooling strategy: last or mean')
     
     args = parser.parse_args()
     train(args)
