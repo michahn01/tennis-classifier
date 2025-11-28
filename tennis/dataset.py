@@ -23,7 +23,7 @@ class TennisDataset(Dataset):
         "smash": ["smash"]
     }
 
-    def __init__(self, root_dir, split='train', num_frames=32, transform=None, experts_only=True, cache_dir=None):
+    def __init__(self, root_dir, split='train', num_frames=32, transform=None, experts_only=True, cache_dir=None, feature_dir=None):
         """
         Args:
             root_dir (str): Path to the VIDEO_RGB directory.
@@ -36,6 +36,8 @@ class TennisDataset(Dataset):
         self.num_frames = num_frames
         self.transform = transform
         self.experts_only = experts_only
+        self.return_paths = False
+        self.feature_dir = feature_dir
         
         self.classes = list(self.CLASS_MAPPING.keys())
         self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
@@ -125,6 +127,20 @@ class TennisDataset(Dataset):
     def __getitem__(self, idx):
         video_path, label = self.samples[idx]
         
+        if self.feature_dir:
+            # Load pre-extracted features
+            # Construct path: feature_dir/rel_path.pt
+            # video_path is absolute: root_dir/subdir/filename
+            rel_path = os.path.relpath(video_path, self.root_dir)
+            feature_path = os.path.join(self.feature_dir, os.path.splitext(rel_path)[0] + ".pt")
+            
+            if not os.path.exists(feature_path):
+                # Fallback or error? For now, error as we expect features to be there
+                raise FileNotFoundError(f"Feature file not found: {feature_path}")
+                
+            features = torch.load(feature_path) # (T, 2048)
+            return features, label
+
         # Generate cache path
         # Use MD5 of the video path to ensure uniqueness
         video_hash = hashlib.md5(video_path.encode('utf-8')).hexdigest()
@@ -152,6 +168,9 @@ class TennisDataset(Dataset):
             # Apply transform to each frame
             # frames is (T, C, H, W) for torch
             frames = self.transform(frames)
+            
+        if self.return_paths:
+            return frames, label, video_path
             
         return frames, label
 
