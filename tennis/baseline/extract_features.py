@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -9,7 +10,7 @@ import argparse
 from tennis.dataset import VideoDataset, TennisDataset
 
 
-def get_samples(data_dir, experts_only=True):
+def get_samples(data_dir):
     """
     Scans the data directory and returns a list of (video_path, label_idx) tuples.
     """
@@ -37,20 +38,6 @@ def get_samples(data_dir, experts_only=True):
             [f for f in os.listdir(subdir_path) if f.endswith((".mp4", ".avi", ".mov"))]
         )
 
-        if experts_only:
-            # Filter for experts only (p32-p55)
-            expert_files = []
-            for f in files:
-                try:
-                    player_id_str = f.split("_")[0]
-                    if player_id_str.startswith("p"):
-                        player_id = int(player_id_str[1:])
-                        if 32 <= player_id <= 55:
-                            expert_files.append(f)
-                except ValueError:
-                    continue
-            files = expert_files
-
         for f in files:
             samples.append((os.path.join(subdir_path, f), class_idx))
 
@@ -72,7 +59,7 @@ def extract_features(args):
     )
 
     # Load all samples
-    all_samples, classes = get_samples(args.data_dir, experts_only=True)
+    all_samples, classes = get_samples(args.data_dir)
     print(f"Found {len(all_samples)} total samples.")
 
     # Split samples
@@ -84,12 +71,14 @@ def extract_features(args):
     val_samples = []
     test_samples = []
 
+    random.seed(1)
+
     for label, paths in class_samples.items():
-        paths.sort()
+        random.shuffle(paths)
 
         n = len(paths)
-        train_end = int(0.8 * n)
-        val_end = int(0.9 * n)
+        train_end = int(round(0.8 * n))
+        val_end = train_end + int(round(0.1 * n))
 
         train_paths = paths[:train_end]
         val_paths = paths[train_end:val_end]
