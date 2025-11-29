@@ -198,13 +198,6 @@ def search():
     print(f"Best Model Location: {os.path.join(best_checkpoint_dir, 'best_model.pth')}")
     print("="*30)
 
-    print(f"Best Validation Accuracy: {best_acc:.2f}%")
-    print("Best Hyperparameters:")
-    for k, v in best_params.items():
-        print(f"  {k}: {v}")
-    print(f"Best Model Location: {os.path.join(best_checkpoint_dir, 'best_model.pth')}")
-    print("="*30)
-
 if __name__ == "__main__":
     # Set start method to 'spawn' for CUDA compatibility if needed, 
     # though we are passing device strings, not tensors. 
