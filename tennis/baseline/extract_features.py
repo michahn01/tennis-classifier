@@ -10,7 +10,7 @@ import argparse
 from tennis.dataset import VideoDataset, TennisDataset
 
 
-def get_samples(data_dir):
+def get_samples(data_dir, only_experts=False):
     """
     Scans the data directory and returns a list of (video_path, label_idx) tuples.
     """
@@ -39,6 +39,20 @@ def get_samples(data_dir):
         )
 
         for f in files:
+            if only_experts:
+                try:
+                    # Filename format: p<player_id>_<action>_s<shot_id>.avi
+                    # Experts are p32 to p55
+                    pid_part = f.split('_')[0]
+                    if pid_part.startswith('p'):
+                        pid = int(pid_part[1:])
+                        if not (32 <= pid <= 55):
+                            continue
+                    else:
+                        continue
+                except (ValueError, IndexError):
+                    continue
+
             samples.append((os.path.join(subdir_path, f), class_idx))
 
     return samples, classes
@@ -59,7 +73,7 @@ def extract_features(args):
     )
 
     # Load all samples
-    all_samples, classes = get_samples(args.data_dir)
+    all_samples, classes = get_samples(args.data_dir, only_experts=args.only_experts)
     print(f"Found {len(all_samples)} total samples.")
 
     # Split samples by Player ID to avoid contamination
@@ -180,6 +194,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--limit", type=int, default=None, help="Limit number of samples to process"
+    )
+    parser.add_argument(
+        "--only_experts", action="store_true", help="Only sample experts (p32-p55)"
     )
 
     args = parser.parse_args()
