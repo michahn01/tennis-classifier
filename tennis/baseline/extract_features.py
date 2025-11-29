@@ -109,7 +109,9 @@ def extract_features(args):
 
     # Split ratios: 70% Train, 15% Val, 15% Test
     train_end = int(round(0.7 * n_players))
+    print("train_end =", train_end)
     val_end = train_end + int(round(0.15 * n_players))
+    print("val_end =", val_end)
 
     train_players = set(player_ids[:train_end])
     val_players = set(player_ids[train_end:val_end])
