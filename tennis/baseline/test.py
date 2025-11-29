@@ -102,6 +102,27 @@ if __name__ == "__main__":
     parser.add_argument(
         "--device", type=str, default=None, help="Device (e.g., cuda:0, cpu)"
     )
+    parser.add_argument(
+        "--infer_params",
+        action="store_true",
+        help="Infer model parameters from checkpoint_dir path",
+    )
 
     args = parser.parse_args()
+
+    if args.infer_params:
+        if not args.checkpoint_dir:
+            raise ValueError("--checkpoint_dir must be specified when using --infer_params")
+        
+        import re
+        # Expecting format like .../search_h512_l2_d0.5/...
+        match = re.search(r"search_h(\d+)_l(\d+)_d([\d.]+)", args.checkpoint_dir)
+        if match:
+            args.hidden_size = int(match.group(1))
+            args.lstm_layers = int(match.group(2))
+            args.dropout = float(match.group(3))
+            print(f"Inferred params: hidden_size={args.hidden_size}, lstm_layers={args.lstm_layers}, dropout={args.dropout}")
+        else:
+            raise ValueError(f"Could not infer params from path: {args.checkpoint_dir}")
+
     test(args)
