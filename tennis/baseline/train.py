@@ -57,6 +57,8 @@ def train(args):
 
     best_val_acc = 0.0
     best_val_loss = float("inf")
+    epochs_no_improve = 0
+    patience = 25
 
     for epoch in range(args.epochs):
         model.train()
@@ -119,11 +121,17 @@ def train(args):
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             best_val_loss = val_loss
+            epochs_no_improve = 0
             os.makedirs(args.checkpoint_dir, exist_ok=True)
             torch.save(
                 model.state_dict(), os.path.join(args.checkpoint_dir, "best_model.pth")
             )
             print("Saved best model.")
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print(f"Early stopping triggered after {epochs_no_improve} epochs without improvement.")
+                break
 
     print("-" * 30)
     print("Best Model Validation Statistics:")
