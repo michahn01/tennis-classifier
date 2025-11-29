@@ -72,6 +72,14 @@ def extract_features(args):
         [transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
     )
 
+    # Clean output directory to prevent leakage
+    for split in ["train", "val", "test"]:
+        split_path = os.path.join(args.output_dir, split)
+        if os.path.exists(split_path):
+            print(f"Cleaning existing split directory: {split_path}")
+            import shutil
+            shutil.rmtree(split_path)
+
     # Load all samples
     all_samples, classes = get_samples(args.data_dir, only_experts=args.only_experts)
     print(f"Found {len(all_samples)} total samples.")
@@ -98,8 +106,10 @@ def extract_features(args):
     random.shuffle(player_ids)
 
     n_players = len(player_ids)
-    train_end = int(round(0.8 * n_players))
-    val_end = train_end + int(round(0.1 * n_players))
+
+    # Split ratios: 70% Train, 15% Val, 15% Test
+    train_end = int(round(0.7 * n_players))
+    val_end = train_end + int(round(0.15 * n_players))
 
     train_players = set(player_ids[:train_end])
     val_players = set(player_ids[train_end:val_end])
