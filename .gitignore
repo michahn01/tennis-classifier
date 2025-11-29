@@ -3,3 +3,4 @@ __pycache__
 data/
 *.egg-info
 other/
+search_logs/
