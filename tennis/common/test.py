@@ -5,7 +5,17 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset
-from tennis.attention.model import AttentionTennisClassifier
+
+
+def get_model_class(model_type):
+    if model_type == "baseline":
+        from tennis.baseline.model import TennisClassifier
+        return TennisClassifier
+    elif model_type == "attention":
+        from tennis.attention.model import AttentionTennisClassifier
+        return AttentionTennisClassifier
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
 
 
 def test(args):
@@ -13,6 +23,10 @@ def test(args):
         args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu")
     )
     print(f"Using device: {device}")
+
+    # Set default checkpoint dir if not provided
+    if not args.checkpoint_dir:
+        args.checkpoint_dir = f"tennis/{args.model_type}/models"
 
     # Check for model checkpoint
     model_path = os.path.join(args.checkpoint_dir, "best_model.pth")
@@ -36,7 +50,8 @@ def test(args):
     )
 
     # Model
-    model = AttentionTennisClassifier(
+    model_class = get_model_class(args.model_type)
+    model = model_class(
         num_classes=6,
         input_dim=2048,
         lstm_hidden_size=args.hidden_size,
@@ -69,6 +84,14 @@ def test(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test Tennis Classifier")
 
+    parser.add_argument(
+        "--model_type",
+        type=str,
+        required=True,
+        choices=["baseline", "attention"],
+        help="Type of model to test",
+    )
+
     # Data arguments
     parser.add_argument(
         "--feature_dir",
@@ -79,8 +102,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default="tennis/attention/models",
-        help="Directory containing best_model.pth",
+        default=None,
+        help="Directory containing best_model.pth (default: tennis/<model_type>/models)",
     )
 
     # Model arguments (must match training)

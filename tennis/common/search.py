@@ -7,21 +7,7 @@ import queue
 import time
 from types import SimpleNamespace
 
-from tennis.attention.train import train
-
-# Global lock for printing to main console if needed (though we mostly log to files)
-print_lock = multiprocessing.Lock()
-
-import argparse
-import itertools
-import sys
-import os
-import multiprocessing
-import queue
-import time
-from types import SimpleNamespace
-
-from tennis.attention.train import train
+from tennis.common.train import train
 
 # Global lock for printing to main console if needed (though we mostly log to files)
 print_lock = multiprocessing.Lock()
@@ -92,29 +78,36 @@ def worker(device_queue, task_queue, result_queue, log_dir):
         result_queue.put((val_acc, run_args_dict, args.checkpoint_dir))
 
 def search():
+    parser = argparse.ArgumentParser(description="Hyperparameter Search for Tennis Classifier")
+    parser.add_argument(
+        "--model_type",
+        type=str,
+        required=True,
+        choices=["baseline", "attention"],
+        help="Type of model to search for",
+    )
+    parser.add_argument("--epochs", type=int, default=300, help="Number of training epochs per run")
+    parser.add_argument("--feature_dir", type=str, default="data/features", help="Path to features")
+    # device argument is removed/ignored as we manage devices internally
+    
+    script_args = parser.parse_args()
+
     # Default arguments matching train.py
     defaults = {
-        "feature_dir": "data/features",
-        "checkpoint_dir": "tennis/attention/models",
+        "model_type": script_args.model_type,
+        "feature_dir": script_args.feature_dir,
+        "checkpoint_dir": f"tennis/{script_args.model_type}/models",
         "epochs": 300,
         "batch_size": 8,
-        "lr": 1e-4,
+        "lr": 1e-3,
         "weight_decay": 1e-4,
-        "num_workers": 2, # Reduced from 8 to avoid CPU oversubscription with 4 parallel runs
+        "num_workers": 4,
         "device": None,
         # Hyperparams to search (defaults, will be overwritten)
         "hidden_size": 256,
         "lstm_layers": 1,
         "dropout": 0.1,
     }
-
-    # Allow overriding defaults via command line for the search script itself
-    parser = argparse.ArgumentParser(description="Hyperparameter Search for Tennis Classifier")
-    parser.add_argument("--epochs", type=int, default=defaults["epochs"], help="Number of training epochs per run")
-    parser.add_argument("--feature_dir", type=str, default=defaults["feature_dir"], help="Path to features")
-    # device argument is removed/ignored as we manage devices internally
-    
-    script_args = parser.parse_args()
 
     # Create search_logs directory
     log_dir = "search_logs"

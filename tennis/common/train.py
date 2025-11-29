@@ -6,10 +6,20 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset
-from tennis.attention.model import AttentionTennisClassifier
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
+
+
+def get_model_class(model_type):
+    if model_type == "baseline":
+        from tennis.baseline.model import TennisClassifier
+        return TennisClassifier
+    elif model_type == "attention":
+        from tennis.attention.model import AttentionTennisClassifier
+        return AttentionTennisClassifier
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
 
 
 def train(args):
@@ -45,7 +55,8 @@ def train(args):
     )
 
     # Model
-    model = AttentionTennisClassifier(
+    model_class = get_model_class(args.model_type)
+    model = model_class(
         num_classes=6,
         input_dim=2048,
         lstm_hidden_size=args.hidden_size,
@@ -70,6 +81,10 @@ def train(args):
         "val_loss": [],
         "val_acc": []
     }
+
+    # Set default checkpoint dir if not provided
+    if not args.checkpoint_dir:
+        args.checkpoint_dir = f"tennis/{args.model_type}/models"
 
     for epoch in range(args.epochs):
         model.train()
@@ -208,7 +223,15 @@ def train(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train Attention Tennis Classifier")
+    parser = argparse.ArgumentParser(description="Train Tennis Classifier")
+
+    parser.add_argument(
+        "--model_type",
+        type=str,
+        required=True,
+        choices=["baseline", "attention"],
+        help="Type of model to train",
+    )
 
     # Data arguments
     parser.add_argument(
@@ -220,8 +243,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default="tennis/attention/models",
-        help="Directory to save checkpoints",
+        default=None,
+        help="Directory to save checkpoints (default: tennis/<model_type>/models)",
     )
     parser.add_argument(
         "--plot_dir",
