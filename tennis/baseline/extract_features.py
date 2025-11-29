@@ -62,38 +62,51 @@ def extract_features(args):
     all_samples, classes = get_samples(args.data_dir)
     print(f"Found {len(all_samples)} total samples.")
 
-    # Split samples
-    class_samples = {i: [] for i in range(len(classes))}
+    # Split samples by Player ID to avoid contamination
+    # Filename format: p<player_id>_<action>_s<shot_id>.avi
+    player_samples = {}
     for path, label in all_samples:
-        class_samples[label].append(path)
+        filename = os.path.basename(path)
+        # Extract player ID (e.g., p10 -> 10)
+        if filename.startswith("p") and "_" in filename:
+            player_id = filename.split("_")[0]
+        else:
+            # Fallback for non-conforming filenames: use filename as unique ID
+            print(f"Warning: Filename {filename} does not match expected format p<ID>_... Using filename as ID.")
+            player_id = filename
+        
+        if player_id not in player_samples:
+            player_samples[player_id] = []
+        player_samples[player_id].append((path, label))
+
+    player_ids = sorted(list(player_samples.keys()))
+    random.seed(1)
+    random.shuffle(player_ids)
+
+    n_players = len(player_ids)
+    train_end = int(round(0.8 * n_players))
+    val_end = train_end + int(round(0.1 * n_players))
+
+    train_players = set(player_ids[:train_end])
+    val_players = set(player_ids[train_end:val_end])
+    test_players = set(player_ids[val_end:])
 
     train_samples = []
     val_samples = []
     test_samples = []
 
-    random.seed(1)
-
-    for label, paths in class_samples.items():
-        random.shuffle(paths)
-
-        n = len(paths)
-        train_end = int(round(0.8 * n))
-        val_end = train_end + int(round(0.1 * n))
-
-        train_paths = paths[:train_end]
-        val_paths = paths[train_end:val_end]
-        test_paths = paths[val_end:]
-
-        for p in train_paths:
-            train_samples.append((p, label))
-        for p in val_paths:
-            val_samples.append((p, label))
-        for p in test_paths:
-            test_samples.append((p, label))
+    for pid, samples in player_samples.items():
+        if pid in train_players:
+            train_samples.extend(samples)
+        elif pid in val_players:
+            val_samples.extend(samples)
+        else:
+            test_samples.extend(samples)
 
     print(
-        f"Split sizes: Train={len(train_samples)}, Val={len(val_samples)}, Test={len(test_samples)}"
+        f"Split sizes (by player): Train={len(train_samples)}, Val={len(val_samples)}, Test={len(test_samples)}"
     )
+    print(f"Player counts: Train={len(train_players)}, Val={len(val_players)}, Test={len(test_players)}")
 
     splits = {"train": train_samples, "val": val_samples, "test": test_samples}
 
