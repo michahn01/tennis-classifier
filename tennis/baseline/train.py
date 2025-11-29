@@ -7,6 +7,9 @@ from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset
 from tennis.baseline.model import TennisClassifier
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 
 
 def train(args):
@@ -60,6 +63,14 @@ def train(args):
     epochs_no_improve = 0
     patience = 25
 
+    # History tracking
+    history = {
+        "train_loss": [],
+        "train_acc": [],
+        "val_loss": [],
+        "val_acc": []
+    }
+
     for epoch in range(args.epochs):
         model.train()
         running_loss = 0.0
@@ -90,6 +101,8 @@ def train(args):
 
         epoch_loss = running_loss / len(train_loader)
         epoch_acc = 100 * correct / total
+        history["train_loss"].append(epoch_loss)
+        history["train_acc"].append(epoch_acc)
         print(
             f"Epoch [{epoch + 1}/{args.epochs}] Train Loss: {epoch_loss:.4f}, Train Acc: {epoch_acc:.2f}%"
         )
@@ -114,6 +127,8 @@ def train(args):
 
         val_loss /= len(val_loader) if len(val_loader) > 0 else 1
         val_acc = 100 * val_correct / val_total if val_total > 0 else 0
+        history["val_loss"].append(val_loss)
+        history["val_acc"].append(val_acc)
         print(
             f"Epoch [{epoch + 1}/{args.epochs}] Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%"
         )
@@ -139,6 +154,56 @@ def train(args):
     print(f"Accuracy: {best_val_acc:.2f}%")
     print("-" * 30)
 
+    # Plotting
+    if args.plot_dir:
+        os.makedirs(args.plot_dir, exist_ok=True)
+        epochs_range = range(1, len(history["train_loss"]) + 1)
+
+        # Accuracy Plot
+        plt.figure()
+        plt.plot(epochs_range, history["train_acc"], label="Train Acc")
+        plt.plot(epochs_range, history["val_acc"], label="Val Acc")
+        plt.title("Accuracy Learning Curve")
+        plt.xlabel("Epochs")
+        plt.ylabel("Accuracy (%)")
+        plt.legend()
+        plt.savefig(os.path.join(args.plot_dir, "accuracy.png"))
+        plt.close()
+
+        # Loss Plot
+        plt.figure()
+        plt.plot(epochs_range, history["train_loss"], label="Train Loss")
+        plt.plot(epochs_range, history["val_loss"], label="Val Loss")
+        plt.title("Loss Learning Curve")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.savefig(os.path.join(args.plot_dir, "loss.png"))
+        plt.close()
+
+        # Combined Plot
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        ax1.plot(epochs_range, history["train_acc"], label="Train Acc")
+        ax1.plot(epochs_range, history["val_acc"], label="Val Acc")
+        ax1.set_title("Accuracy")
+        ax1.set_xlabel("Epochs")
+        ax1.set_ylabel("Accuracy (%)")
+        ax1.legend()
+
+        ax2.plot(epochs_range, history["train_loss"], label="Train Loss")
+        ax2.plot(epochs_range, history["val_loss"], label="Val Loss")
+        ax2.set_title("Loss")
+        ax2.set_xlabel("Epochs")
+        ax2.set_ylabel("Loss")
+        ax2.legend()
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(args.plot_dir, "combined.png"))
+        plt.close()
+        
+        print(f"Plots saved to {args.plot_dir}")
+
     return best_val_acc
 
 
@@ -157,6 +222,12 @@ if __name__ == "__main__":
         type=str,
         default="tennis/baseline/models",
         help="Directory to save checkpoints",
+    )
+    parser.add_argument(
+        "--plot_dir",
+        type=str,
+        default=None,
+        help="Directory to save learning curve plots",
     )
 
     # Training arguments

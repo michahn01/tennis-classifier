@@ -151,7 +151,9 @@ def search():
             "lstm_layers": lstm_layers,
             "dropout": dropout,
             # Unique checkpoint dir for each run
-            "checkpoint_dir": os.path.join(defaults["checkpoint_dir"], config_name)
+            "checkpoint_dir": os.path.join(defaults["checkpoint_dir"], config_name),
+            # Directory for learning curve graphs
+            "plot_dir": os.path.join(log_dir, f"{config_name}_graphs")
         })
         task_queue.put((run_args_dict, config_name))
 
