@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset
-from tennis.baseline.model import TennisClassifier
+from tennis.attention.model import AttentionTennisClassifier
 
 
 def test(args):
@@ -36,7 +36,7 @@ def test(args):
     )
 
     # Model
-    model = TennisClassifier(
+    model = AttentionTennisClassifier(
         num_classes=6,
         input_dim=2048,
         lstm_hidden_size=args.hidden_size,
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default="tennis/baseline/models",
+        default="tennis/attention/models",
         help="Directory containing best_model.pth",
     )
 

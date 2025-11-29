@@ -7,7 +7,7 @@ import queue
 import time
 from types import SimpleNamespace
 
-from tennis.baseline.train import train
+from tennis.attention.train import train
 
 # Global lock for printing to main console if needed (though we mostly log to files)
 print_lock = multiprocessing.Lock()
@@ -21,7 +21,7 @@ import queue
 import time
 from types import SimpleNamespace
 
-from tennis.baseline.train import train
+from tennis.attention.train import train
 
 # Global lock for printing to main console if needed (though we mostly log to files)
 print_lock = multiprocessing.Lock()
@@ -95,7 +95,7 @@ def search():
     # Default arguments matching train.py
     defaults = {
         "feature_dir": "data/features",
-        "checkpoint_dir": "tennis/baseline/models",
+        "checkpoint_dir": "tennis/attention/models",
         "epochs": 300,
         "batch_size": 8,
         "lr": 1e-4,

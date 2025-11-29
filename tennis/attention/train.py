@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset
-from tennis.baseline.model import TennisClassifier
+from tennis.attention.model import AttentionTennisClassifier
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
@@ -45,7 +45,7 @@ def train(args):
     )
 
     # Model
-    model = TennisClassifier(
+    model = AttentionTennisClassifier(
         num_classes=6,
         input_dim=2048,
         lstm_hidden_size=args.hidden_size,
@@ -208,7 +208,7 @@ def train(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train Tennis Classifier")
+    parser = argparse.ArgumentParser(description="Train Attention Tennis Classifier")
 
     # Data arguments
     parser.add_argument(
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
-        default="tennis/baseline/models",
+        default="tennis/attention/models",
         help="Directory to save checkpoints",
     )
     parser.add_argument(

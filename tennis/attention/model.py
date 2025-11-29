@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 
-class TennisClassifier(nn.Module):
+class AttentionTennisClassifier(nn.Module):
     """
     Revamped Baseline: LRCNN-like architecture.
     Input (B, T, 2048) -> Dropout -> LSTM -> Dropout -> FC -> Softmax -> Mean -> Output (B, 6)
@@ -20,7 +20,7 @@ class TennisClassifier(nn.Module):
         lstm_layers=1,
         dropout=0.1,
     ):
-        super(TennisClassifier, self).__init__()
+        super(AttentionTennisClassifier, self).__init__()
 
         self.input_dropout = nn.Dropout(dropout)
 
