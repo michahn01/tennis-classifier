@@ -8,6 +8,7 @@ import shutil
 from types import SimpleNamespace
 
 from tennis.common.train import train
+from tennis.common.model_utils import get_model_choices
 
 # Global lock for printing to main console if needed (though we mostly log to files)
 print_lock = multiprocessing.Lock()
@@ -88,7 +89,7 @@ def search():
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention", "skeleton", "skeleton_attention"],
+        choices=get_model_choices(),
         help="Type of model to search for",
     )
     parser.add_argument(

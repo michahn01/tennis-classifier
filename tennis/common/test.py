@@ -4,27 +4,10 @@ import torch
 from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset, TennisPoseDataset
+from tennis.common.model_utils import get_model_class, get_dataset_class, requires_pose, get_model_choices
 
 
-def get_model_class(model_type):
-    if model_type == "baseline":
-        from tennis.baseline.model import TennisClassifier
 
-        return TennisClassifier
-    elif model_type == "attention":
-        from tennis.attention.model import AttentionTennisClassifier
-
-        return AttentionTennisClassifier
-    elif model_type == "skeleton":
-        from tennis.skeleton.model import SkeletonTennisClassifier
-
-        return SkeletonTennisClassifier
-    elif model_type == "skeleton_attention":
-        from tennis.skeleton_attention.model import SkeletonTennisClassifier
-
-        return SkeletonTennisClassifier
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
 
 
 def test(args):
@@ -43,12 +26,14 @@ def test(args):
         raise FileNotFoundError(f"Best model not found at {model_path}")
 
     # Dataset
-    if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
+    # Dataset
+    DatasetClass = get_dataset_class(args.model_type)
+    if requires_pose(args.model_type):
         if not args.pose_dir:
             raise ValueError("pose_dir must be provided for skeleton model")
-        test_dataset = TennisPoseDataset(args.feature_dir, args.pose_dir, split="test")
+        test_dataset = DatasetClass(args.feature_dir, args.pose_dir, split="test")
     else:
-        test_dataset = TennisDataset(args.feature_dir, split="test")
+        test_dataset = DatasetClass(args.feature_dir, split="test")
     print(f"Test samples: {len(test_dataset)}")
 
     if len(test_dataset) == 0:
@@ -106,7 +91,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention", "skeleton", "skeleton_attention"],
+        choices=get_model_choices(),
         help="Type of model to test",
     )
 

@@ -7,31 +7,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset, TennisPoseDataset
+from tennis.common.model_utils import get_model_class, get_dataset_class, requires_pose, get_model_choices
 import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.use("Agg")  # Use non-interactive backend
 
 
-def get_model_class(model_type):
-    if model_type == "baseline":
-        from tennis.baseline.model import TennisClassifier
 
-        return TennisClassifier
-    elif model_type == "attention":
-        from tennis.attention.model import AttentionTennisClassifier
-
-        return AttentionTennisClassifier
-    elif model_type == "skeleton":
-        from tennis.skeleton.model import SkeletonTennisClassifier
-
-        return SkeletonTennisClassifier
-    elif model_type == "skeleton_attention":
-        from tennis.skeleton_attention.model import SkeletonTennisClassifier
-
-        return SkeletonTennisClassifier
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
 
 
 def train(args):
@@ -51,12 +34,15 @@ def train(args):
 
         # Load all samples from train_val (or train + val)
         # We use TennisDataset helper to load raw samples without initializing the full dataset yet
-        if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
+        # Load all samples from train_val (or train + val)
+        # We use TennisDataset helper to load raw samples without initializing the full dataset yet
+        DatasetClass = get_dataset_class(args.model_type)
+        if requires_pose(args.model_type):
             if not args.pose_dir:
                 raise ValueError("pose_dir must be provided for skeleton model")
-            temp_dataset = TennisPoseDataset(args.feature_dir, args.pose_dir, split="train_val")
+            temp_dataset = DatasetClass(args.feature_dir, args.pose_dir, split="train_val")
         else:
-            temp_dataset = TennisDataset(args.feature_dir, split="train_val")
+            temp_dataset = DatasetClass(args.feature_dir, split="train_val")
 
         all_samples = temp_dataset.samples
 
@@ -120,35 +106,38 @@ def train(args):
             elif pid in val_players:
                 val_samples.extend(samples)
 
-        if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
-            train_dataset = TennisPoseDataset(
+        DatasetClass = get_dataset_class(args.model_type)
+        if requires_pose(args.model_type):
+            train_dataset = DatasetClass(
                 args.feature_dir, args.pose_dir, split="custom", samples=train_samples
             )
-            val_dataset = TennisPoseDataset(
+            val_dataset = DatasetClass(
                 args.feature_dir, args.pose_dir, split="custom", samples=val_samples
             )
         else:
-            train_dataset = TennisDataset(
+            train_dataset = DatasetClass(
                 args.feature_dir, split="custom", samples=train_samples
             )
-            val_dataset = TennisDataset(
+            val_dataset = DatasetClass(
                 args.feature_dir, split="custom", samples=val_samples
             )
 
     else:
         # Standard split
-        if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
+        # Standard split
+        DatasetClass = get_dataset_class(args.model_type)
+        if requires_pose(args.model_type):
             if not args.pose_dir:
                 raise ValueError("pose_dir must be provided for skeleton model")
-            train_dataset = TennisPoseDataset(
+            train_dataset = DatasetClass(
                 args.feature_dir, args.pose_dir, split="train"
             )
-            val_dataset = TennisPoseDataset(
+            val_dataset = DatasetClass(
                 args.feature_dir, args.pose_dir, split="val"
             )
         else:
-            train_dataset = TennisDataset(args.feature_dir, split="train")
-            val_dataset = TennisDataset(args.feature_dir, split="val")
+            train_dataset = DatasetClass(args.feature_dir, split="train")
+            val_dataset = DatasetClass(args.feature_dir, split="val")
 
     print(f"Train samples: {len(train_dataset)}")
     print(f"Val samples: {len(val_dataset)}")
@@ -261,8 +250,8 @@ def train(args):
                 val_total += labels.size(0)
                 val_correct += (predicted == labels).sum().item()
 
-        val_loss /= len(val_loader) if len(val_loader) > 0 else 1
-        val_acc = 100 * val_correct / val_total if val_total > 0 else 0
+        val_loss /= len(val_loader)
+        val_acc = 100 * val_correct / val_total
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         print(
@@ -352,7 +341,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention", "skeleton", "skeleton_attention"],
+        choices=get_model_choices(),
         help="Type of model to train",
     )
 

@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 
-class SkeletonTennisClassifier(nn.Module):
+class SkeletonAttentionTennisClassifier(nn.Module):
     """
     Multi-stream classifier: RGB (LSTM) + Pose (1D CNN).
     """
     def __init__(self, num_classes=6, input_dim=2048, pose_input_dim=99, 
                  lstm_hidden_size=256, lstm_layers=1, dropout=0.1):
-        super(SkeletonTennisClassifier, self).__init__()
+        super(SkeletonAttentionTennisClassifier, self).__init__()
         
         # RGB Stream, same as baseline (LSTM)
         self.rgb_input_dropout = nn.Dropout(dropout)
