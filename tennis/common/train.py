@@ -66,7 +66,7 @@ def train(args):
 
         # k-fold logic
         player_ids = sorted(list(player_samples.keys()))
-        random.seed(42)
+        random.seed(5)
         random.shuffle(player_ids)
 
         n_players = len(player_ids)
@@ -80,6 +80,10 @@ def train(args):
             count = fold_size + (1 if i < remainder else 0)
             folds.append(player_ids[start : start + count])
             start += count
+
+        for i, fold in enumerate(folds):
+            print(f"fold {i}: len = {len(fold)}")
+            print(fold)
 
         val_players = set(folds[args.fold_index])
         train_players = set()
