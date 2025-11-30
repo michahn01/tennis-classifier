@@ -6,15 +6,16 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from tennis.dataset import TennisDataset, TennisPoseDataset
-from tennis.common.model_utils import get_model_class, get_dataset_class, requires_pose, get_model_choices
+from tennis.common.model_utils import (
+    get_model_class,
+    get_dataset_class,
+    requires_pose,
+    get_model_choices,
+)
 import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.use("Agg")  # Use non-interactive backend
-
-
-
 
 
 def train(args):
@@ -40,7 +41,9 @@ def train(args):
         if requires_pose(args.model_type):
             if not args.pose_dir:
                 raise ValueError("pose_dir must be provided for skeleton model")
-            temp_dataset = DatasetClass(args.feature_dir, args.pose_dir, split="train_val")
+            temp_dataset = DatasetClass(
+                args.feature_dir, args.pose_dir, split="train_val"
+            )
         else:
             temp_dataset = DatasetClass(args.feature_dir, split="train_val")
 
@@ -129,12 +132,8 @@ def train(args):
         if requires_pose(args.model_type):
             if not args.pose_dir:
                 raise ValueError("pose_dir must be provided for skeleton model")
-            train_dataset = DatasetClass(
-                args.feature_dir, args.pose_dir, split="train"
-            )
-            val_dataset = DatasetClass(
-                args.feature_dir, args.pose_dir, split="val"
-            )
+            train_dataset = DatasetClass(args.feature_dir, args.pose_dir, split="train")
+            val_dataset = DatasetClass(args.feature_dir, args.pose_dir, split="val")
         else:
             train_dataset = DatasetClass(args.feature_dir, split="train")
             val_dataset = DatasetClass(args.feature_dir, split="val")

@@ -6,10 +6,13 @@ import mediapipe as mp
 import numpy as np
 import warnings
 import urllib.request
+from tennis.dataset import TennisDataset
 
 # Suppress Protobuf warnings
-warnings.filterwarnings("ignore", category=UserWarning, module='google.protobuf.symbol_database')
-from tennis.dataset import TennisDataset
+warnings.filterwarnings(
+    "ignore", category=UserWarning, module="google.protobuf.symbol_database"
+)
+
 
 def get_samples(data_dir, only_experts=False):
     """
@@ -58,12 +61,14 @@ def get_samples(data_dir, only_experts=False):
 
     return samples, classes
 
+
 def download_model(model_path):
     url = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task"
     if not os.path.exists(model_path):
         print(f"Downloading model to {model_path}...")
         urllib.request.urlretrieve(url, model_path)
         print("Download complete.")
+
 
 def extract_pose(args):
     model_path = "pose_landmarker_full.task"
@@ -77,14 +82,16 @@ def extract_pose(args):
 
     # Create a landmarker instance with the GPU delegate
     options = PoseLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=model_path, delegate=BaseOptions.Delegate.GPU),
+        base_options=BaseOptions(
+            model_asset_path=model_path, delegate=BaseOptions.Delegate.GPU
+        ),
         running_mode=VisionRunningMode.IMAGE,
         num_poses=1,
         min_pose_detection_confidence=0.5,
         min_pose_presence_confidence=0.5,
         min_tracking_confidence=0.5,
     )
-    
+
     # Clean output directory
     splits_to_clean = ["train", "val", "test"]
     if args.merge_train_val:
@@ -95,6 +102,7 @@ def extract_pose(args):
         if os.path.exists(split_path):
             print(f"Cleaning existing split directory: {split_path}")
             import shutil
+
             shutil.rmtree(split_path)
 
     # Load all samples
@@ -109,13 +117,14 @@ def extract_pose(args):
             player_id = filename.split("_")[0]
         else:
             player_id = filename
-        
+
         if player_id not in player_samples:
             player_samples[player_id] = []
         player_samples[player_id].append((path, label))
 
     player_ids = sorted(list(player_samples.keys()))
     import random
+
     random.seed(1)
     random.shuffle(player_ids)
 
@@ -134,7 +143,7 @@ def extract_pose(args):
                 train_val_samples.extend(samples)
             else:
                 test_samples.extend(samples)
-        
+
         splits = {"train_val": train_val_samples, "test": test_samples}
     else:
         train_end = int(round(0.8 * n_players))
@@ -153,8 +162,10 @@ def extract_pose(args):
                 train_samples.extend(samples)
             elif pid in val_players:
                 val_samples.extend(samples)
-            else:
+            elif pid in test_players:
                 test_samples.extend(samples)
+            else:
+                raise ValueError(f"Unknown player ID: {pid}")
 
         splits = {"train": train_samples, "val": val_samples, "test": test_samples}
 
@@ -165,7 +176,7 @@ def extract_pose(args):
             for i, (video_path, label_idx) in enumerate(samples):
                 if args.limit and i >= args.limit:
                     break
-                
+
                 if i % 10 == 0:
                     print(f"Processing video {i}/{len(samples)}")
 
@@ -175,27 +186,29 @@ def extract_pose(args):
                     continue
 
                 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                
+
                 # Uniform sampling
                 indices = np.linspace(0, total_frames - 1, args.num_frames, dtype=int)
-                
+
                 pose_features = []
-                
+
                 current_frame = 0
                 extracted_count = 0
-                
+
                 while cap.isOpened() and extracted_count < args.num_frames:
                     ret, frame = cap.read()
                     if not ret:
                         break
-                    
+
                     if current_frame in indices:
                         # Convert to RGB for MediaPipe
                         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
-                        
+                        mp_image = mp.Image(
+                            image_format=mp.ImageFormat.SRGB, data=frame_rgb
+                        )
+
                         detection_result = landmarker.detect(mp_image)
-                        
+
                         if detection_result.pose_landmarks:
                             # Extract 33 landmarks (x, y, z) -> 99 features
                             # detection_result.pose_landmarks is a list of lists (one per detected pose)
@@ -206,37 +219,55 @@ def extract_pose(args):
                         else:
                             # If no pose detected, use zeros
                             pose_features.append([0.0] * 99)
-                        
+
                         extracted_count += 1
-                    
+
                     current_frame += 1
-                
+
                 cap.release()
-                
+
                 # Pad if needed
                 while len(pose_features) < args.num_frames:
                     pose_features.append([0.0] * 99)
-                
+
                 # Convert to tensor (T, 99)
                 pose_tensor = torch.tensor(pose_features, dtype=torch.float32)
-                
+
                 # Save
                 class_name = classes[label_idx]
                 base_name = os.path.splitext(os.path.basename(video_path))[0]
                 save_dir = os.path.join(args.output_dir, split_name, class_name)
                 save_path = os.path.join(save_dir, base_name + ".pt")
-                
+
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(pose_tensor, save_path)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract pose features using MediaPipe")
-    parser.add_argument("--data_dir", type=str, default="data/VIDEO_RGB", help="Path to data directory")
-    parser.add_argument("--output_dir", type=str, default="data/pose_features", help="Path to output pose features directory")
-    parser.add_argument("--num_frames", type=int, default=32, help="Number of frames per video")
-    parser.add_argument("--limit", type=int, default=None, help="Limit number of samples to process")
-    parser.add_argument("--only_experts", action="store_true", help="Only sample experts (p32-p55)")
-    parser.add_argument("--merge_train_val", action="store_true", help="Merge train and val splits")
-    
+    parser = argparse.ArgumentParser(
+        description="Extract pose features using MediaPipe"
+    )
+    parser.add_argument(
+        "--data_dir", type=str, default="data/VIDEO_RGB", help="Path to data directory"
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="data/pose_features",
+        help="Path to output pose features directory",
+    )
+    parser.add_argument(
+        "--num_frames", type=int, default=32, help="Number of frames per video"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Limit number of samples to process"
+    )
+    parser.add_argument(
+        "--only_experts", action="store_true", help="Only sample experts (p32-p55)"
+    )
+    parser.add_argument(
+        "--merge_train_val", action="store_true", help="Merge train and val splits"
+    )
+
     args = parser.parse_args()
     extract_pose(args)

@@ -176,10 +176,8 @@ class TennisPoseDataset(Dataset):
                     # Construct corresponding pose path
                     # RGB: data/features/split/class/file.pt
                     # Pose: data/pose_features/split/class/file.pt
-                    pose_path = os.path.join(
-                        self.pose_dir, self.split, class_name, f
-                    )
-                    
+                    pose_path = os.path.join(self.pose_dir, self.split, class_name, f)
+
                     # Only add if pose file exists
                     if os.path.exists(pose_path):
                         samples.append(((rgb_path, pose_path), class_idx))
@@ -194,8 +192,8 @@ class TennisPoseDataset(Dataset):
 
     def __getitem__(self, idx):
         (rgb_path, pose_path), label = self.samples[idx]
-        
+
         rgb_features = torch.load(rgb_path)
         pose_features = torch.load(pose_path)
-        
+
         return (rgb_features, pose_features), label

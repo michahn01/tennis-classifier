@@ -27,20 +27,24 @@ MODEL_CONFIG = {
     },
 }
 
+
 def get_model_class(model_type):
     if model_type not in MODEL_CONFIG:
         raise ValueError(f"Unknown model type: {model_type}")
     return MODEL_CONFIG[model_type]["class"]
+
 
 def get_dataset_class(model_type):
     if model_type not in MODEL_CONFIG:
         raise ValueError(f"Unknown model type: {model_type}")
     return MODEL_CONFIG[model_type]["dataset"]
 
+
 def requires_pose(model_type):
     if model_type not in MODEL_CONFIG:
         raise ValueError(f"Unknown model type: {model_type}")
     return MODEL_CONFIG[model_type]["requires_pose"]
+
 
 def get_model_choices():
     return list(MODEL_CONFIG.keys())

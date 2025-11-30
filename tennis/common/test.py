@@ -3,11 +3,12 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 
-from tennis.dataset import TennisDataset, TennisPoseDataset
-from tennis.common.model_utils import get_model_class, get_dataset_class, requires_pose, get_model_choices
-
-
-
+from tennis.common.model_utils import (
+    get_model_class,
+    get_dataset_class,
+    requires_pose,
+    get_model_choices,
+)
 
 
 def test(args):
