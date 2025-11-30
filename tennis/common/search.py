@@ -110,7 +110,7 @@ def search():
         "checkpoint_dir": f"tennis/{script_args.model_type}/models",
         "epochs": 300,
         "batch_size": 8,
-        "lr": 1e-3,
+        "lr": 1e-4,
         "weight_decay": 1e-4,
         "num_workers": 4,
         "device": None,
