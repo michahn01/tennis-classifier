@@ -142,7 +142,7 @@ def search():
 
     # We assume 4 GPUs: cuda:0, cuda:1, cuda:2, cuda:3
     available_devices = [f"cuda:{i}" for i in range(4)]
-    tasks_per_gpu = 2
+    tasks_per_gpu = 4
     for d in available_devices:
         for _ in range(tasks_per_gpu):
             device_queue.put(d)
