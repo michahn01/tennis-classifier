@@ -47,14 +47,6 @@ def train(args):
         all_samples = temp_dataset.samples
 
         if len(all_samples) == 0:
-            print(
-                "No samples found in 'train_val'. Trying to merge 'train' and 'val'..."
-            )
-            train_ds = TennisDataset(args.feature_dir, split="train")
-            val_ds = TennisDataset(args.feature_dir, split="val")
-            all_samples = train_ds.samples + val_ds.samples
-
-        if len(all_samples) == 0:
             print("No training data found. Please run extract_features.py first.")
             return
 

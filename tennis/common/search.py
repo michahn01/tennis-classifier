@@ -248,9 +248,7 @@ def search():
         if avg_acc > best_acc:
             best_acc = avg_acc
             best_params = data["params"]
-            # For CV, best_checkpoint_dir is ambiguous. We can point to the dir containing folds.
-            # Our checkpoint_dir structure is .../base_config_name/foldX
-            # So the parent of the first fold's dir is the base config dir
+
             first_dir = data["dirs"][0]
             if script_args.k_folds > 0:
                 best_checkpoint_dir = os.path.dirname(first_dir)
