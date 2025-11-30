@@ -47,7 +47,13 @@ def train(args):
 
         # Load all samples from train_val (or train + val)
         # We use TennisDataset helper to load raw samples without initializing the full dataset yet
-        temp_dataset = TennisDataset(args.feature_dir, split="train_val")
+        if args.model_type == "skeleton":
+            if not args.pose_dir:
+                raise ValueError("pose_dir must be provided for skeleton model")
+            temp_dataset = TennisPoseDataset(args.feature_dir, args.pose_dir, split="train_val")
+        else:
+            temp_dataset = TennisDataset(args.feature_dir, split="train_val")
+
         all_samples = temp_dataset.samples
 
         if len(all_samples) == 0:
@@ -56,7 +62,13 @@ def train(args):
 
         # Group by Player ID
         player_samples = {}
-        for path, label in all_samples:
+        for sample_data, label in all_samples:
+            if isinstance(sample_data, tuple):
+                # TennisPoseDataset returns (rgb_path, pose_path)
+                path = sample_data[0]
+            else:
+                path = sample_data
+
             filename = os.path.basename(path)
             # Extract player ID (e.g., p10 -> 10)
             if filename.startswith("p") and "_" in filename:
@@ -66,7 +78,7 @@ def train(args):
 
             if player_id not in player_samples:
                 player_samples[player_id] = []
-            player_samples[player_id].append((path, label))
+            player_samples[player_id].append((sample_data, label))
 
         # k-fold logic
         player_ids = sorted(list(player_samples.keys()))
@@ -104,12 +116,20 @@ def train(args):
             elif pid in val_players:
                 val_samples.extend(samples)
 
-        train_dataset = TennisDataset(
-            args.feature_dir, split="custom", samples=train_samples
-        )
-        val_dataset = TennisDataset(
-            args.feature_dir, split="custom", samples=val_samples
-        )
+        if args.model_type == "skeleton":
+            train_dataset = TennisPoseDataset(
+                args.feature_dir, args.pose_dir, split="custom", samples=train_samples
+            )
+            val_dataset = TennisPoseDataset(
+                args.feature_dir, args.pose_dir, split="custom", samples=val_samples
+            )
+        else:
+            train_dataset = TennisDataset(
+                args.feature_dir, split="custom", samples=train_samples
+            )
+            val_dataset = TennisDataset(
+                args.feature_dir, split="custom", samples=val_samples
+            )
 
     else:
         # Standard split
