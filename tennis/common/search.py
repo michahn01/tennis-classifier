@@ -141,8 +141,10 @@ def search():
 
     # We assume 4 GPUs: cuda:0, cuda:1, cuda:2, cuda:3
     available_devices = [f"cuda:{i}" for i in range(4)]
+    tasks_per_gpu = 2
     for d in available_devices:
-        device_queue.put(d)
+        for _ in range(tasks_per_gpu):
+            device_queue.put(d)
 
     # Prepare tasks
     for hidden_size, lstm_layers, dropout in combinations:
@@ -195,10 +197,10 @@ def search():
             task_queue.put((run_args_dict, config_name))
 
     # Start worker processes
-    # We start 4 workers, one for each GPU.
+    # We start 4 * tasks_per_gpu workers.
     # They will pull from task_queue until empty.
     processes = []
-    for _ in range(4):
+    for _ in range(len(available_devices) * tasks_per_gpu):
         p = multiprocessing.Process(
             target=worker, args=(device_queue, task_queue, result_queue, log_dir)
         )
