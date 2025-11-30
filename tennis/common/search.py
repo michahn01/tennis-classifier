@@ -88,6 +88,7 @@ def search():
     )
     parser.add_argument("--epochs", type=int, default=300, help="Number of training epochs per run")
     parser.add_argument("--feature_dir", type=str, default="data/features", help="Path to features")
+    parser.add_argument("--k_folds", type=int, default=0, help="Number of folds for CV (0 to disable)")
     # device argument is removed/ignored as we manage devices internally
     
     script_args = parser.parse_args()
@@ -135,20 +136,43 @@ def search():
 
     # Prepare tasks
     for hidden_size, lstm_layers, dropout in combinations:
-        run_args_dict = defaults.copy()
-        config_name = f"search_h{hidden_size}_l{lstm_layers}_d{dropout}"
-        run_args_dict.update({
-            "epochs": script_args.epochs,
-            "feature_dir": script_args.feature_dir,
-            "hidden_size": hidden_size,
-            "lstm_layers": lstm_layers,
-            "dropout": dropout,
-            # Unique checkpoint dir for each run
-            "checkpoint_dir": os.path.join(defaults["checkpoint_dir"], config_name),
-            # Directory for learning curve graphs
-            "plot_dir": os.path.join(log_dir, f"{config_name}_graphs")
-        })
-        task_queue.put((run_args_dict, config_name))
+        base_config_name = f"search_h{hidden_size}_l{lstm_layers}_d{dropout}"
+        
+        if script_args.k_folds > 0:
+            for fold_idx in range(script_args.k_folds):
+                run_args_dict = defaults.copy()
+                config_name = f"{base_config_name}_fold{fold_idx}"
+                
+                run_args_dict.update({
+                    "epochs": script_args.epochs,
+                    "feature_dir": script_args.feature_dir,
+                    "hidden_size": hidden_size,
+                    "lstm_layers": lstm_layers,
+                    "dropout": dropout,
+                    "k_folds": script_args.k_folds,
+                    "fold_index": fold_idx,
+                    # Unique checkpoint dir for each run
+                    "checkpoint_dir": os.path.join(defaults["checkpoint_dir"], base_config_name, f"fold{fold_idx}"),
+                    # Directory for learning curve graphs
+                    "plot_dir": os.path.join(log_dir, f"{config_name}_graphs")
+                })
+                task_queue.put((run_args_dict, config_name))
+        else:
+            run_args_dict = defaults.copy()
+            config_name = base_config_name
+            run_args_dict.update({
+                "epochs": script_args.epochs,
+                "feature_dir": script_args.feature_dir,
+                "hidden_size": hidden_size,
+                "lstm_layers": lstm_layers,
+                "dropout": dropout,
+                "k_folds": 0,
+                # Unique checkpoint dir for each run
+                "checkpoint_dir": os.path.join(defaults["checkpoint_dir"], config_name),
+                # Directory for learning curve graphs
+                "plot_dir": os.path.join(log_dir, f"{config_name}_graphs")
+            })
+            task_queue.put((run_args_dict, config_name))
 
     # Start worker processes
     # We start 4 workers, one for each GPU. 
@@ -172,23 +196,47 @@ def search():
     best_params = {}
     best_checkpoint_dir = ""
 
+    results_by_config = {}
+
     while not result_queue.empty():
         val_acc, params, checkpoint_dir = result_queue.get()
         if val_acc is not None:
-            if val_acc > best_acc:
-                best_acc = val_acc
-                best_params = {
-                    "hidden_size": params["hidden_size"],
-                    "lstm_layers": params["lstm_layers"],
-                    "dropout": params["dropout"]
-                }
-                best_checkpoint_dir = checkpoint_dir
+            # Reconstruct base config name from params
+            h = params["hidden_size"]
+            l = params["lstm_layers"]
+            d = params["dropout"]
+            config_key = f"h{h}_l{l}_d{d}"
+            
+            if config_key not in results_by_config:
+                results_by_config[config_key] = {"accs": [], "params": params, "dirs": []}
+            
+            results_by_config[config_key]["accs"].append(val_acc)
+            results_by_config[config_key]["dirs"].append(checkpoint_dir)
+
+    for config_key, data in results_by_config.items():
+        avg_acc = sum(data["accs"]) / len(data["accs"])
+        print(f"Config {config_key}: Avg Acc = {avg_acc:.2f}% (Runs: {len(data['accs'])})")
+        
+        if avg_acc > best_acc:
+            best_acc = avg_acc
+            best_params = data["params"]
+            # For CV, best_checkpoint_dir is ambiguous. We can point to the dir containing folds.
+            # Our checkpoint_dir structure is .../base_config_name/foldX
+            # So the parent of the first fold's dir is the base config dir
+            first_dir = data["dirs"][0]
+            if script_args.k_folds > 0:
+                best_checkpoint_dir = os.path.dirname(first_dir)
+            else:
+                best_checkpoint_dir = first_dir
 
     print(f"Best Validation Accuracy: {best_acc:.2f}%")
     print("Best Hyperparameters:")
     for k, v in best_params.items():
         print(f"  {k}: {v}")
-    print(f"Best Model Location: {os.path.join(best_checkpoint_dir, 'best_model.pth')}")
+    if script_args.k_folds > 0:
+         print(f"Best Model Location (contains folds): {best_checkpoint_dir}")
+    else:
+         print(f"Best Model Location: {os.path.join(best_checkpoint_dir, 'best_model.pth')}")
     print("="*30)
 
 if __name__ == "__main__":

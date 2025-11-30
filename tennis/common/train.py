@@ -1,5 +1,6 @@
 import os
 import argparse
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -29,9 +30,80 @@ def train(args):
     print(f"Using device: {device}")
 
     # Datasets
-    # Note: TennisDataset now expects feature_dir and split
-    train_dataset = TennisDataset(args.feature_dir, split="train")
-    val_dataset = TennisDataset(args.feature_dir, split="val")
+    if args.k_folds > 0:
+        if args.fold_index < 0 or args.fold_index >= args.k_folds:
+            raise ValueError(f"Fold index {args.fold_index} out of range for {args.k_folds} folds.")
+
+        print(f"Running K-Fold CV: Fold {args.fold_index + 1}/{args.k_folds}")
+        
+        # Load all samples from train_val (or train + val)
+        # We use TennisDataset helper to load raw samples without initializing the full dataset yet
+        temp_dataset = TennisDataset(args.feature_dir, split="train_val")
+        all_samples = temp_dataset.samples
+        
+        if len(all_samples) == 0:
+            print("No samples found in 'train_val'. Trying to merge 'train' and 'val'...")
+            train_ds = TennisDataset(args.feature_dir, split="train")
+            val_ds = TennisDataset(args.feature_dir, split="val")
+            all_samples = train_ds.samples + val_ds.samples
+            
+        if len(all_samples) == 0:
+            print("No training data found. Please run extract_features.py first.")
+            return
+
+        # Group by Player ID
+        player_samples = {}
+        for path, label in all_samples:
+            filename = os.path.basename(path)
+            # Extract player ID (e.g., p10 -> 10)
+            if filename.startswith("p") and "_" in filename:
+                player_id = filename.split("_")[0]
+            else:
+                player_id = filename # Fallback
+            
+            if player_id not in player_samples:
+                player_samples[player_id] = []
+            player_samples[player_id].append((path, label))
+
+        # k-fold logic
+        player_ids = sorted(list(player_samples.keys()))
+        random.seed(42) 
+        random.shuffle(player_ids)
+        
+        n_players = len(player_ids)
+        fold_size = n_players // args.k_folds
+        remainder = n_players % args.k_folds
+        
+        folds = []
+        start = 0
+        for i in range(args.k_folds):
+            # Distribute remainder among first few folds
+            count = fold_size + (1 if i < remainder else 0)
+            folds.append(player_ids[start : start + count])
+            start += count
+
+        val_players = set(folds[args.fold_index])
+        train_players = set()
+        for i in range(args.k_folds):
+            if i != args.fold_index:
+                train_players.update(folds[i])
+
+        train_samples = []
+        val_samples = []
+        
+        for pid, samples in player_samples.items():
+            if pid in train_players:
+                train_samples.extend(samples)
+            elif pid in val_players:
+                val_samples.extend(samples)
+
+        train_dataset = TennisDataset(args.feature_dir, split="custom", samples=train_samples)
+        val_dataset = TennisDataset(args.feature_dir, split="custom", samples=val_samples)
+        
+    else:
+        # Standard split
+        train_dataset = TennisDataset(args.feature_dir, split="train")
+        val_dataset = TennisDataset(args.feature_dir, split="val")
 
     print(f"Train samples: {len(train_dataset)}")
     print(f"Val samples: {len(val_dataset)}")
@@ -275,6 +347,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dropout", type=float, default=0.1, help="Dropout probability"
     )
+    
+    # K-Fold arguments
+    parser.add_argument("--k_folds", type=int, default=0, help="Number of folds for CV (0 to disable)")
+    parser.add_argument("--fold_index", type=int, default=0, help="Index of the fold to use as validation (0 to k_folds-1)")
 
     args = parser.parse_args()
     train(args)

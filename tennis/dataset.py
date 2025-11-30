@@ -86,7 +86,7 @@ class TennisDataset(Dataset):
         "smash": ["smash"],
     }
 
-    def __init__(self, feature_dir, split="train"):
+    def __init__(self, feature_dir, split="train", samples=None):
         """
         Args:
             feature_dir: Directory containing processed features.
@@ -98,7 +98,7 @@ class TennisDataset(Dataset):
         self.classes = list(self.CLASS_MAPPING.keys())
         self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
 
-        self.samples = self._load_samples()
+        self.samples = samples if samples is not None else self._load_samples()
 
     def _load_samples(self):
         samples = []

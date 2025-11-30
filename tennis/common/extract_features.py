@@ -73,7 +73,11 @@ def extract_features(args):
     )
 
     # Clean output directory to prevent leakage
-    for split in ["train", "val", "test"]:
+    splits_to_clean = ["train", "val", "test"]
+    if args.merge_train_val:
+        splits_to_clean = ["train_val", "test"]
+
+    for split in splits_to_clean:
         split_path = os.path.join(args.output_dir, split)
         if os.path.exists(split_path):
             print(f"Cleaning existing split directory: {split_path}")
@@ -107,34 +111,54 @@ def extract_features(args):
 
     n_players = len(player_ids)
 
-    # Split ratios: 80% Train, 10% Val, 10% Test
-    train_end = int(round(0.8 * n_players))
-    print("train_end =", train_end)
-    val_end = train_end + int(round(0.1 * n_players))
-    print("val_end =", val_end)
+    if args.merge_train_val:
+        # 90% Train+Val, 10% Test
+        train_val_end = int(round(0.9 * n_players))
+        train_val_players = set(player_ids[:train_val_end])
+        test_players = set(player_ids[train_val_end:])
+        
+        train_val_samples = []
+        test_samples = []
+        
+        for pid, samples in player_samples.items():
+            if pid in train_val_players:
+                train_val_samples.extend(samples)
+            else:
+                test_samples.extend(samples)
+                
+        print(f"Split sizes (by player): Train+Val={len(train_val_samples)}, Test={len(test_samples)}")
+        print(f"Player counts: Train+Val={len(train_val_players)}, Test={len(test_players)}")
+        
+        splits = {"train_val": train_val_samples, "test": test_samples}
+    else:
+        # Split ratios: 80% Train, 10% Val, 10% Test
+        train_end = int(round(0.8 * n_players))
+        print("train_end =", train_end)
+        val_end = train_end + int(round(0.1 * n_players))
+        print("val_end =", val_end)
 
-    train_players = set(player_ids[:train_end])
-    val_players = set(player_ids[train_end:val_end])
-    test_players = set(player_ids[val_end:])
+        train_players = set(player_ids[:train_end])
+        val_players = set(player_ids[train_end:val_end])
+        test_players = set(player_ids[val_end:])
 
-    train_samples = []
-    val_samples = []
-    test_samples = []
+        train_samples = []
+        val_samples = []
+        test_samples = []
 
-    for pid, samples in player_samples.items():
-        if pid in train_players:
-            train_samples.extend(samples)
-        elif pid in val_players:
-            val_samples.extend(samples)
-        else:
-            test_samples.extend(samples)
+        for pid, samples in player_samples.items():
+            if pid in train_players:
+                train_samples.extend(samples)
+            elif pid in val_players:
+                val_samples.extend(samples)
+            else:
+                test_samples.extend(samples)
 
-    print(
-        f"Split sizes (by player): Train={len(train_samples)}, Val={len(val_samples)}, Test={len(test_samples)}"
-    )
-    print(f"Player counts: Train={len(train_players)}, Val={len(val_players)}, Test={len(test_players)}")
+        print(
+            f"Split sizes (by player): Train={len(train_samples)}, Val={len(val_samples)}, Test={len(test_samples)}"
+        )
+        print(f"Player counts: Train={len(train_players)}, Val={len(val_players)}, Test={len(test_players)}")
 
-    splits = {"train": train_samples, "val": val_samples, "test": test_samples}
+        splits = {"train": train_samples, "val": val_samples, "test": test_samples}
 
     for split_name, samples in splits.items():
         print(f"Processing split: {split_name}")
@@ -209,6 +233,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--only_experts", action="store_true", help="Only sample experts (p32-p55)"
+    )
+    parser.add_argument(
+        "--merge_train_val", action="store_true", help="Merge train and val splits for K-Fold CV"
     )
 
     args = parser.parse_args()
