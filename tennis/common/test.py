@@ -1,7 +1,6 @@
 import os
 import argparse
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from tennis.dataset import TennisDataset
@@ -10,9 +9,11 @@ from tennis.dataset import TennisDataset
 def get_model_class(model_type):
     if model_type == "baseline":
         from tennis.baseline.model import TennisClassifier
+
         return TennisClassifier
     elif model_type == "attention":
         from tennis.attention.model import AttentionTennisClassifier
+
         return AttentionTennisClassifier
     else:
         raise ValueError(f"Unknown model type: {model_type}")
@@ -67,7 +68,7 @@ def test(args):
     # Evaluation
     correct = 0
     total = 0
-    
+
     with torch.no_grad():
         for inputs, labels in test_loader:
             inputs, labels = inputs.to(device), labels.to(device)
@@ -114,7 +115,10 @@ if __name__ == "__main__":
     parser.add_argument(
         # for test, we use .eval() so dropout is ignored actually
         # we include it here for completeness
-        "--dropout", type=float, default=0, help="Dropout probability"
+        "--dropout",
+        type=float,
+        default=0,
+        help="Dropout probability",
     )
 
     # Other arguments
@@ -135,16 +139,21 @@ if __name__ == "__main__":
 
     if args.infer_params:
         if not args.checkpoint_dir:
-            raise ValueError("--checkpoint_dir must be specified when using --infer_params")
-        
+            raise ValueError(
+                "--checkpoint_dir must be specified when using --infer_params"
+            )
+
         import re
+
         # Expecting format like .../search_h512_l2_d0.5/...
         match = re.search(r"search_h(\d+)_l(\d+)_d([\d.]+)", args.checkpoint_dir)
         if match:
             args.hidden_size = int(match.group(1))
             args.lstm_layers = int(match.group(2))
             args.dropout = float(match.group(3))
-            print(f"Inferred params: hidden_size={args.hidden_size}, lstm_layers={args.lstm_layers}, dropout={args.dropout}")
+            print(
+                f"Inferred params: hidden_size={args.hidden_size}, lstm_layers={args.lstm_layers}, dropout={args.dropout}"
+            )
         else:
             raise ValueError(f"Could not infer params from path: {args.checkpoint_dir}")
 

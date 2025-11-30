@@ -53,10 +53,10 @@ class AttentionTennisClassifier(nn.Module):
 
         # 1) Compute attention scores: (B, T, H) -> (B, T, 1)
         attn_scores = self.attention(lstm_out)
-        
+
         # 2) Compute attention weights: (B, T, 1)
         attn_weights = torch.softmax(attn_scores, dim=1)
-        
+
         # 3) Compute context vector: sum(weights * lstm_out) -> (B, H)
         context_vector = torch.sum(attn_weights * lstm_out, dim=1)
 
@@ -71,6 +71,7 @@ class Attention(nn.Module):
     """
     Computes a weighted average of the LSTM output across time.
     """
+
     def __init__(self, hidden_size):
         super(Attention, self).__init__()
         self.attn = nn.Linear(hidden_size, 1)

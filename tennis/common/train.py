@@ -9,15 +9,18 @@ from torch.utils.data import DataLoader
 from tennis.dataset import TennisDataset
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
+
+matplotlib.use("Agg")  # Use non-interactive backend
 
 
 def get_model_class(model_type):
     if model_type == "baseline":
         from tennis.baseline.model import TennisClassifier
+
         return TennisClassifier
     elif model_type == "attention":
         from tennis.attention.model import AttentionTennisClassifier
+
         return AttentionTennisClassifier
     else:
         raise ValueError(f"Unknown model type: {model_type}")
@@ -32,21 +35,25 @@ def train(args):
     # Datasets
     if args.k_folds > 0:
         if args.fold_index < 0 or args.fold_index >= args.k_folds:
-            raise ValueError(f"Fold index {args.fold_index} out of range for {args.k_folds} folds.")
+            raise ValueError(
+                f"Fold index {args.fold_index} out of range for {args.k_folds} folds."
+            )
 
         print(f"Running K-Fold CV: Fold {args.fold_index + 1}/{args.k_folds}")
-        
+
         # Load all samples from train_val (or train + val)
         # We use TennisDataset helper to load raw samples without initializing the full dataset yet
         temp_dataset = TennisDataset(args.feature_dir, split="train_val")
         all_samples = temp_dataset.samples
-        
+
         if len(all_samples) == 0:
-            print("No samples found in 'train_val'. Trying to merge 'train' and 'val'...")
+            print(
+                "No samples found in 'train_val'. Trying to merge 'train' and 'val'..."
+            )
             train_ds = TennisDataset(args.feature_dir, split="train")
             val_ds = TennisDataset(args.feature_dir, split="val")
             all_samples = train_ds.samples + val_ds.samples
-            
+
         if len(all_samples) == 0:
             print("No training data found. Please run extract_features.py first.")
             return
@@ -59,21 +66,21 @@ def train(args):
             if filename.startswith("p") and "_" in filename:
                 player_id = filename.split("_")[0]
             else:
-                player_id = filename # Fallback
-            
+                player_id = filename  # Fallback
+
             if player_id not in player_samples:
                 player_samples[player_id] = []
             player_samples[player_id].append((path, label))
 
         # k-fold logic
         player_ids = sorted(list(player_samples.keys()))
-        random.seed(42) 
+        random.seed(42)
         random.shuffle(player_ids)
-        
+
         n_players = len(player_ids)
         fold_size = n_players // args.k_folds
         remainder = n_players % args.k_folds
-        
+
         folds = []
         start = 0
         for i in range(args.k_folds):
@@ -90,16 +97,20 @@ def train(args):
 
         train_samples = []
         val_samples = []
-        
+
         for pid, samples in player_samples.items():
             if pid in train_players:
                 train_samples.extend(samples)
             elif pid in val_players:
                 val_samples.extend(samples)
 
-        train_dataset = TennisDataset(args.feature_dir, split="custom", samples=train_samples)
-        val_dataset = TennisDataset(args.feature_dir, split="custom", samples=val_samples)
-        
+        train_dataset = TennisDataset(
+            args.feature_dir, split="custom", samples=train_samples
+        )
+        val_dataset = TennisDataset(
+            args.feature_dir, split="custom", samples=val_samples
+        )
+
     else:
         # Standard split
         train_dataset = TennisDataset(args.feature_dir, split="train")
@@ -147,12 +158,7 @@ def train(args):
     patience = 25
 
     # History tracking
-    history = {
-        "train_loss": [],
-        "train_acc": [],
-        "val_loss": [],
-        "val_acc": []
-    }
+    history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
     # Set default checkpoint dir if not provided
     if not args.checkpoint_dir:
@@ -232,7 +238,9 @@ def train(args):
         else:
             epochs_no_improve += 1
             if epochs_no_improve >= patience:
-                print(f"Early stopping triggered after {epochs_no_improve} epochs without improvement.")
+                print(
+                    f"Early stopping triggered after {epochs_no_improve} epochs without improvement."
+                )
                 break
 
     print("-" * 30)
@@ -270,7 +278,7 @@ def train(args):
 
         # Combined Plot
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        
+
         ax1.plot(epochs_range, history["train_acc"], label="Train Acc")
         ax1.plot(epochs_range, history["val_acc"], label="Val Acc")
         ax1.set_title("Accuracy")
@@ -288,7 +296,7 @@ def train(args):
         plt.tight_layout()
         plt.savefig(os.path.join(args.plot_dir, "combined.png"))
         plt.close()
-        
+
         print(f"Plots saved to {args.plot_dir}")
 
     return best_val_acc
@@ -347,10 +355,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dropout", type=float, default=0.1, help="Dropout probability"
     )
-    
+
     # K-Fold arguments
-    parser.add_argument("--k_folds", type=int, default=0, help="Number of folds for CV (0 to disable)")
-    parser.add_argument("--fold_index", type=int, default=0, help="Index of the fold to use as validation (0 to k_folds-1)")
+    parser.add_argument(
+        "--k_folds", type=int, default=0, help="Number of folds for CV (0 to disable)"
+    )
+    parser.add_argument(
+        "--fold_index",
+        type=int,
+        default=0,
+        help="Index of the fold to use as validation (0 to k_folds-1)",
+    )
 
     args = parser.parse_args()
     train(args)

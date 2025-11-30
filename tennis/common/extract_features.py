@@ -43,8 +43,8 @@ def get_samples(data_dir, only_experts=False):
                 try:
                     # Filename format: p<player_id>_<action>_s<shot_id>.avi
                     # Experts are p32 to p55
-                    pid_part = f.split('_')[0]
-                    if pid_part.startswith('p'):
+                    pid_part = f.split("_")[0]
+                    if pid_part.startswith("p"):
                         pid = int(pid_part[1:])
                         if not (32 <= pid <= 55):
                             continue
@@ -82,6 +82,7 @@ def extract_features(args):
         if os.path.exists(split_path):
             print(f"Cleaning existing split directory: {split_path}")
             import shutil
+
             shutil.rmtree(split_path)
 
     # Load all samples
@@ -98,9 +99,11 @@ def extract_features(args):
             player_id = filename.split("_")[0]
         else:
             # Fallback for non-conforming filenames: use filename as unique ID
-            print(f"Warning: Filename {filename} does not match expected format p<ID>_... Using filename as ID.")
+            print(
+                f"Warning: Filename {filename} does not match expected format p<ID>_... Using filename as ID."
+            )
             player_id = filename
-        
+
         if player_id not in player_samples:
             player_samples[player_id] = []
         player_samples[player_id].append((path, label))
@@ -116,19 +119,23 @@ def extract_features(args):
         train_val_end = int(round(0.9 * n_players))
         train_val_players = set(player_ids[:train_val_end])
         test_players = set(player_ids[train_val_end:])
-        
+
         train_val_samples = []
         test_samples = []
-        
+
         for pid, samples in player_samples.items():
             if pid in train_val_players:
                 train_val_samples.extend(samples)
             else:
                 test_samples.extend(samples)
-                
-        print(f"Split sizes (by player): Train+Val={len(train_val_samples)}, Test={len(test_samples)}")
-        print(f"Player counts: Train+Val={len(train_val_players)}, Test={len(test_players)}")
-        
+
+        print(
+            f"Split sizes (by player): Train+Val={len(train_val_samples)}, Test={len(test_samples)}"
+        )
+        print(
+            f"Player counts: Train+Val={len(train_val_players)}, Test={len(test_players)}"
+        )
+
         splits = {"train_val": train_val_samples, "test": test_samples}
     else:
         # Split ratios: 80% Train, 10% Val, 10% Test
@@ -156,7 +163,9 @@ def extract_features(args):
         print(
             f"Split sizes (by player): Train={len(train_samples)}, Val={len(val_samples)}, Test={len(test_samples)}"
         )
-        print(f"Player counts: Train={len(train_players)}, Val={len(val_players)}, Test={len(test_players)}")
+        print(
+            f"Player counts: Train={len(train_players)}, Val={len(val_players)}, Test={len(test_players)}"
+        )
 
         splits = {"train": train_samples, "val": val_samples, "test": test_samples}
 
@@ -235,7 +244,9 @@ if __name__ == "__main__":
         "--only_experts", action="store_true", help="Only sample experts (p32-p55)"
     )
     parser.add_argument(
-        "--merge_train_val", action="store_true", help="Merge train and val splits for K-Fold CV"
+        "--merge_train_val",
+        action="store_true",
+        help="Merge train and val splits for K-Fold CV",
     )
 
     args = parser.parse_args()
