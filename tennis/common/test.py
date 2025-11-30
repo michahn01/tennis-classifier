@@ -3,7 +3,7 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 
-from tennis.dataset import TennisDataset
+from tennis.dataset import TennisDataset, TennisPoseDataset
 
 
 def get_model_class(model_type):
@@ -15,6 +15,10 @@ def get_model_class(model_type):
         from tennis.attention.model import AttentionTennisClassifier
 
         return AttentionTennisClassifier
+    elif model_type == "skeleton":
+        from tennis.skeleton.model import SkeletonTennisClassifier
+
+        return SkeletonTennisClassifier
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -35,7 +39,12 @@ def test(args):
         raise FileNotFoundError(f"Best model not found at {model_path}")
 
     # Dataset
-    test_dataset = TennisDataset(args.feature_dir, split="test")
+    if args.model_type == "skeleton":
+        if not args.pose_dir:
+            raise ValueError("pose_dir must be provided for skeleton model")
+        test_dataset = TennisPoseDataset(args.feature_dir, args.pose_dir, split="test")
+    else:
+        test_dataset = TennisDataset(args.feature_dir, split="test")
     print(f"Test samples: {len(test_dataset)}")
 
     if len(test_dataset) == 0:
@@ -71,7 +80,11 @@ def test(args):
 
     with torch.no_grad():
         for inputs, labels in test_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+            if isinstance(inputs, list) or isinstance(inputs, tuple):
+                inputs = [x.to(device) for x in inputs]
+            else:
+                inputs = inputs.to(device)
+            labels = labels.to(device)
 
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
@@ -89,7 +102,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention"],
+        choices=["baseline", "attention", "skeleton"],
         help="Type of model to test",
     )
 
@@ -99,6 +112,12 @@ if __name__ == "__main__":
         type=str,
         default="data/features",
         help="Path to pre-extracted features",
+    )
+    parser.add_argument(
+        "--pose_dir",
+        type=str,
+        default="data/pose_features",
+        help="Path to pre-extracted pose features (required for skeleton model)",
     )
     parser.add_argument(
         "--checkpoint_dir",
