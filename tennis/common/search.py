@@ -4,6 +4,7 @@ import sys
 import os
 import multiprocessing
 import queue
+import shutil
 from types import SimpleNamespace
 
 from tennis.common.train import train
@@ -218,7 +219,7 @@ def search():
     # Collect results
     best_acc = 0.0
     best_params = {}
-    best_checkpoint_dir = ""
+    best_model_src = ""
 
     results_by_config = {}
 
@@ -251,22 +252,25 @@ def search():
             best_acc = avg_acc
             best_params = data["params"]
 
-            first_dir = data["dirs"][0]
-            if script_args.k_folds > 0:
-                best_checkpoint_dir = os.path.dirname(first_dir)
-            else:
-                best_checkpoint_dir = first_dir
+            # Find the fold with the highest accuracy in this config
+            best_fold_idx = data["accs"].index(max(data["accs"]))
+            best_fold_dir = data["dirs"][best_fold_idx]
+            best_model_src = os.path.join(best_fold_dir, "best_model.pth")
 
     print(f"Best Validation Accuracy: {best_acc:.2f}%")
     print("Best Hyperparameters:")
     for k, v in best_params.items():
         print(f"  {k}: {v}")
-    if script_args.k_folds > 0:
-        print(f"Best Model Location (contains folds): {best_checkpoint_dir}")
+    
+    if best_model_src and os.path.exists(best_model_src):
+        target_dir = f"tennis/{script_args.model_type}/models"
+        os.makedirs(target_dir, exist_ok=True)
+        target_path = os.path.join(target_dir, "total_best_model.pth")
+        shutil.copy2(best_model_src, target_path)
+        print(f"Best model saved to: {target_path}")
+        print(f"(Source: {best_model_src})")
     else:
-        print(
-            f"Best Model Location: {os.path.join(best_checkpoint_dir, 'best_model.pth')}"
-        )
+        print("Error: Could not locate best model file.")
     print("=" * 30)
 
 
