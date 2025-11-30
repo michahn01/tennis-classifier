@@ -88,7 +88,7 @@ def search():
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention", "skeleton"],
+        choices=["baseline", "attention", "skeleton", "skeleton_attention"],
         help="Type of model to search for",
     )
     parser.add_argument(

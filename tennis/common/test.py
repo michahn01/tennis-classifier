@@ -19,6 +19,10 @@ def get_model_class(model_type):
         from tennis.skeleton.model import SkeletonTennisClassifier
 
         return SkeletonTennisClassifier
+    elif model_type == "skeleton_attention":
+        from tennis.skeleton_attention.model import SkeletonTennisClassifier
+
+        return SkeletonTennisClassifier
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -39,7 +43,7 @@ def test(args):
         raise FileNotFoundError(f"Best model not found at {model_path}")
 
     # Dataset
-    if args.model_type == "skeleton":
+    if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
         if not args.pose_dir:
             raise ValueError("pose_dir must be provided for skeleton model")
         test_dataset = TennisPoseDataset(args.feature_dir, args.pose_dir, split="test")
@@ -102,7 +106,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention", "skeleton"],
+        choices=["baseline", "attention", "skeleton", "skeleton_attention"],
         help="Type of model to test",
     )
 

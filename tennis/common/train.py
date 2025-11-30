@@ -26,6 +26,10 @@ def get_model_class(model_type):
         from tennis.skeleton.model import SkeletonTennisClassifier
 
         return SkeletonTennisClassifier
+    elif model_type == "skeleton_attention":
+        from tennis.skeleton_attention.model import SkeletonTennisClassifier
+
+        return SkeletonTennisClassifier
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -47,7 +51,7 @@ def train(args):
 
         # Load all samples from train_val (or train + val)
         # We use TennisDataset helper to load raw samples without initializing the full dataset yet
-        if args.model_type == "skeleton":
+        if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
             if not args.pose_dir:
                 raise ValueError("pose_dir must be provided for skeleton model")
             temp_dataset = TennisPoseDataset(args.feature_dir, args.pose_dir, split="train_val")
@@ -116,7 +120,7 @@ def train(args):
             elif pid in val_players:
                 val_samples.extend(samples)
 
-        if args.model_type == "skeleton":
+        if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
             train_dataset = TennisPoseDataset(
                 args.feature_dir, args.pose_dir, split="custom", samples=train_samples
             )
@@ -133,7 +137,7 @@ def train(args):
 
     else:
         # Standard split
-        if args.model_type == "skeleton":
+        if args.model_type == "skeleton" or args.model_type == "skeleton_attention":
             if not args.pose_dir:
                 raise ValueError("pose_dir must be provided for skeleton model")
             train_dataset = TennisPoseDataset(
@@ -348,7 +352,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention", "skeleton"],
+        choices=["baseline", "attention", "skeleton", "skeleton_attention"],
         help="Type of model to train",
     )
 
