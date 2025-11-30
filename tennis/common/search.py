@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 from tennis.common.train import train
 from tennis.common.model_utils import get_model_choices
+import tennis.common.config as config
 
 # Global lock for printing to main console if needed (though we mostly log to files)
 print_lock = multiprocessing.Lock()
@@ -93,10 +94,16 @@ def search():
         help="Type of model to search for",
     )
     parser.add_argument(
-        "--epochs", type=int, default=300, help="Number of training epochs per run"
+        "--epochs",
+        type=int,
+        default=config.DEFAULT_EPOCHS,
+        help="Number of training epochs per run",
     )
     parser.add_argument(
-        "--feature_dir", type=str, default="data/features", help="Path to features"
+        "--feature_dir",
+        type=str,
+        default=config.DEFAULT_FEATURE_DIR,
+        help="Path to features",
     )
     parser.add_argument(
         "--k_folds", type=int, default=0, help="Number of folds for CV (0 to disable)"
@@ -104,7 +111,7 @@ def search():
     parser.add_argument(
         "--pose_dir",
         type=str,
-        default="data/pose_features",
+        default=config.DEFAULT_POSE_DIR,
         help="Path to pre-extracted pose features (required for skeleton model)",
     )
     # device argument is removed/ignored as we manage devices internally
@@ -117,16 +124,16 @@ def search():
         "feature_dir": script_args.feature_dir,
         "pose_dir": script_args.pose_dir,
         "checkpoint_dir": f"tennis/{script_args.model_type}/models",
-        "epochs": 300,
-        "batch_size": 8,
-        "lr": 1e-3,
-        "weight_decay": 1e-4,
-        "num_workers": 4,
+        "epochs": config.DEFAULT_EPOCHS,
+        "batch_size": config.DEFAULT_BATCH_SIZE,
+        "lr": config.SEARCH_LR,
+        "weight_decay": config.DEFAULT_WEIGHT_DECAY,
+        "num_workers": config.SEARCH_NUM_WORKERS,
         "device": None,
         # Hyperparams to search (defaults, will be overwritten)
-        "hidden_size": 256,
-        "lstm_layers": 1,
-        "dropout": 0.1,
+        "hidden_size": config.DEFAULT_HIDDEN_SIZE,
+        "lstm_layers": config.DEFAULT_LSTM_LAYERS,
+        "dropout": config.DEFAULT_DROPOUT,
     }
 
     # Create search_logs directory
@@ -135,9 +142,9 @@ def search():
     print(f"Logs will be saved to: {os.path.abspath(log_dir)}")
 
     # Search space
-    hidden_sizes = [128, 256, 512]
-    lstm_layers_list = [1, 2]
-    dropouts = [0.1, 0.3, 0.5]
+    hidden_sizes = config.SEARCH_SPACE["hidden_sizes"]
+    lstm_layers_list = config.SEARCH_SPACE["lstm_layers"]
+    dropouts = config.SEARCH_SPACE["dropouts"]
 
     combinations = list(itertools.product(hidden_sizes, lstm_layers_list, dropouts))
     print(f"Starting grid search with {len(combinations)} combinations...")
@@ -150,7 +157,7 @@ def search():
 
     # We assume 4 GPUs: cuda:0, cuda:1, cuda:2, cuda:3
     available_devices = [f"cuda:{i}" for i in range(4)]
-    tasks_per_gpu = 4
+    tasks_per_gpu = config.SEARCH_TASKS_PER_GPU
     for d in available_devices:
         for _ in range(tasks_per_gpu):
             device_queue.put(d)

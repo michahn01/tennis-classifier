@@ -1,0 +1,34 @@
+# Data Paths
+DEFAULT_DATA_DIR = "data/VIDEO_RGB"
+DEFAULT_FEATURE_DIR = "data/features"
+DEFAULT_POSE_DIR = "data/pose_features"
+
+# Data Extraction
+DEFAULT_NUM_FRAMES = 32
+DEFAULT_EXTRACT_BATCH_SIZE = 8
+DEFAULT_EXTRACT_NUM_WORKERS = 4
+DEFAULT_EXTRACT_SEED = 1
+
+# Training Hyperparameters/Parameters
+DEFAULT_EPOCHS = 300
+DEFAULT_BATCH_SIZE = 8
+DEFAULT_LR = 1e-3
+DEFAULT_WEIGHT_DECAY = 1e-4
+DEFAULT_NUM_WORKERS = 8
+DEFAULT_PATIENCE = 25
+DEFAULT_SEED = 1
+
+# Model Hyperparameters
+DEFAULT_HIDDEN_SIZE = 256
+DEFAULT_LSTM_LAYERS = 1
+DEFAULT_DROPOUT = 0.1
+
+# Search Configuration
+SEARCH_LR = 1e-3
+SEARCH_NUM_WORKERS = 4
+SEARCH_TASKS_PER_GPU = 4
+SEARCH_SPACE = {
+    "hidden_sizes": [128, 256, 512],
+    "lstm_layers": [1, 2],
+    "dropouts": [0.1, 0.3, 0.5],
+}

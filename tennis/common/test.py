@@ -9,6 +9,7 @@ from tennis.common.model_utils import (
     requires_pose,
     get_model_choices,
 )
+import tennis.common.config as config
 
 
 def test(args):
@@ -100,13 +101,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--feature_dir",
         type=str,
-        default="data/features",
+        default=config.DEFAULT_FEATURE_DIR,
         help="Path to pre-extracted features",
     )
     parser.add_argument(
         "--pose_dir",
         type=str,
-        default="data/pose_features",
+        default=config.DEFAULT_POSE_DIR,
         help="Path to pre-extracted pose features (required for skeleton model)",
     )
     parser.add_argument(
@@ -117,9 +118,17 @@ if __name__ == "__main__":
     )
 
     # Model arguments (must match training)
-    parser.add_argument("--hidden_size", type=int, default=256, help="LSTM hidden size")
     parser.add_argument(
-        "--lstm_layers", type=int, default=1, help="Number of LSTM layers"
+        "--hidden_size",
+        type=int,
+        default=config.DEFAULT_HIDDEN_SIZE,
+        help="LSTM hidden size",
+    )
+    parser.add_argument(
+        "--lstm_layers",
+        type=int,
+        default=config.DEFAULT_LSTM_LAYERS,
+        help="Number of LSTM layers",
     )
     parser.add_argument(
         # for test, we use .eval() so dropout is ignored actually
@@ -131,9 +140,14 @@ if __name__ == "__main__":
     )
 
     # Other arguments
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
     parser.add_argument(
-        "--num_workers", type=int, default=8, help="Data loading workers"
+        "--batch_size", type=int, default=config.DEFAULT_BATCH_SIZE, help="Batch size"
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=config.DEFAULT_NUM_WORKERS,
+        help="Data loading workers",
     )
     parser.add_argument(
         "--device", type=str, default=None, help="Device (e.g., cuda:0, cpu)"

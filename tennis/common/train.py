@@ -14,6 +14,7 @@ from tennis.common.model_utils import (
 )
 import matplotlib.pyplot as plt
 import matplotlib
+import tennis.common.config as config
 
 matplotlib.use("Agg")  # Use non-interactive backend
 
@@ -75,7 +76,7 @@ def train(args):
 
         # k-fold logic
         player_ids = sorted(list(player_samples.keys()))
-        random.seed(5)
+        random.seed(config.DEFAULT_SEED)
         random.shuffle(player_ids)
 
         n_players = len(player_ids)
@@ -177,7 +178,7 @@ def train(args):
     best_val_acc = 0.0
     best_val_loss = float("inf")
     epochs_no_improve = 0
-    patience = 25
+    patience = config.DEFAULT_PATIENCE
 
     # History tracking
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
@@ -348,13 +349,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--feature_dir",
         type=str,
-        default="data/features",
+        default=config.DEFAULT_FEATURE_DIR,
         help="Path to pre-extracted features",
     )
     parser.add_argument(
         "--pose_dir",
         type=str,
-        default="data/pose_features",
+        default=config.DEFAULT_POSE_DIR,
         help="Path to pre-extracted pose features (required for skeleton model)",
     )
     parser.add_argument(
@@ -372,25 +373,51 @@ if __name__ == "__main__":
 
     # Training arguments
     parser.add_argument(
-        "--epochs", type=int, default=300, help="Number of training epochs"
+        "--epochs",
+        type=int,
+        default=config.DEFAULT_EPOCHS,
+        help="Number of training epochs",
     )
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
-    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
-    parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
     parser.add_argument(
-        "--num_workers", type=int, default=8, help="Data loading workers"
+        "--batch_size", type=int, default=config.DEFAULT_BATCH_SIZE, help="Batch size"
+    )
+    parser.add_argument(
+        "--lr", type=float, default=config.DEFAULT_LR, help="Learning rate"
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=config.DEFAULT_WEIGHT_DECAY,
+        help="Weight decay",
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=config.DEFAULT_NUM_WORKERS,
+        help="Data loading workers",
     )
     parser.add_argument(
         "--device", type=str, default=None, help="Device (e.g., cuda:0, cpu)"
     )
 
     # Model arguments
-    parser.add_argument("--hidden_size", type=int, default=256, help="LSTM hidden size")
     parser.add_argument(
-        "--lstm_layers", type=int, default=1, help="Number of LSTM layers"
+        "--hidden_size",
+        type=int,
+        default=config.DEFAULT_HIDDEN_SIZE,
+        help="LSTM hidden size",
     )
     parser.add_argument(
-        "--dropout", type=float, default=0.1, help="Dropout probability"
+        "--lstm_layers",
+        type=int,
+        default=config.DEFAULT_LSTM_LAYERS,
+        help="Number of LSTM layers",
+    )
+    parser.add_argument(
+        "--dropout",
+        type=float,
+        default=config.DEFAULT_DROPOUT,
+        help="Dropout probability",
     )
 
     # K-Fold arguments

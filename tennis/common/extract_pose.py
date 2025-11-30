@@ -6,6 +6,7 @@ import mediapipe as mp
 import numpy as np
 import warnings
 import urllib.request
+import tennis.common.config as config
 from tennis.dataset import TennisDataset
 
 # Suppress Protobuf warnings
@@ -125,7 +126,7 @@ def extract_pose(args):
     player_ids = sorted(list(player_samples.keys()))
     import random
 
-    random.seed(1)
+    random.seed(config.DEFAULT_EXTRACT_SEED)
     random.shuffle(player_ids)
 
     n_players = len(player_ids)
@@ -248,16 +249,22 @@ if __name__ == "__main__":
         description="Extract pose features using MediaPipe"
     )
     parser.add_argument(
-        "--data_dir", type=str, default="data/VIDEO_RGB", help="Path to data directory"
+        "--data_dir",
+        type=str,
+        default=config.DEFAULT_DATA_DIR,
+        help="Path to data directory",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="data/pose_features",
+        default=config.DEFAULT_POSE_DIR,
         help="Path to output pose features directory",
     )
     parser.add_argument(
-        "--num_frames", type=int, default=32, help="Number of frames per video"
+        "--num_frames",
+        type=int,
+        default=config.DEFAULT_NUM_FRAMES,
+        help="Number of frames per video",
     )
     parser.add_argument(
         "--limit", type=int, default=None, help="Limit number of samples to process"

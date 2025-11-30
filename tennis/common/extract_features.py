@@ -6,6 +6,7 @@ import torchvision.models as models
 from torchvision import transforms
 from torch.utils.data import DataLoader
 import argparse
+import tennis.common.config as config
 
 from tennis.dataset import VideoDataset, TennisDataset
 
@@ -109,7 +110,7 @@ def extract_features(args):
         player_samples[player_id].append((path, label))
 
     player_ids = sorted(list(player_samples.keys()))
-    random.seed(1)
+    random.seed(config.DEFAULT_EXTRACT_SEED)
     random.shuffle(player_ids)
 
     n_players = len(player_ids)
@@ -222,20 +223,34 @@ def extract_features(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract features using ResNet50")
     parser.add_argument(
-        "--data_dir", type=str, default="data/VIDEO_RGB", help="Path to data directory"
+        "--data_dir",
+        type=str,
+        default=config.DEFAULT_DATA_DIR,
+        help="Path to data directory",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="data/features",
+        default=config.DEFAULT_FEATURE_DIR,
         help="Path to output features directory",
     )
     parser.add_argument(
-        "--num_frames", type=int, default=32, help="Number of frames per video"
+        "--num_frames",
+        type=int,
+        default=config.DEFAULT_NUM_FRAMES,
+        help="Number of frames per video",
     )
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
     parser.add_argument(
-        "--num_workers", type=int, default=4, help="Data loading workers"
+        "--batch_size",
+        type=int,
+        default=config.DEFAULT_EXTRACT_BATCH_SIZE,
+        help="Batch size",
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=config.DEFAULT_EXTRACT_NUM_WORKERS,
+        help="Data loading workers",
     )
     parser.add_argument(
         "--limit", type=int, default=None, help="Limit number of samples to process"
