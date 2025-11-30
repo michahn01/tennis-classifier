@@ -12,6 +12,7 @@ dependencies = [
     "torchvision",
     "opencv-python",
     "matplotlib",
+    "mediapipe",
 ]
 
 [project.optional-dependencies]

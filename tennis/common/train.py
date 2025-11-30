@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from tennis.dataset import TennisDataset
+from tennis.dataset import TennisDataset, TennisPoseDataset
 import matplotlib.pyplot as plt
 import matplotlib
 
@@ -22,6 +22,10 @@ def get_model_class(model_type):
         from tennis.attention.model import AttentionTennisClassifier
 
         return AttentionTennisClassifier
+    elif model_type == "skeleton":
+        from tennis.skeleton.model import SkeletonTennisClassifier
+
+        return SkeletonTennisClassifier
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -109,8 +113,18 @@ def train(args):
 
     else:
         # Standard split
-        train_dataset = TennisDataset(args.feature_dir, split="train")
-        val_dataset = TennisDataset(args.feature_dir, split="val")
+        if args.model_type == "skeleton":
+            if not args.pose_dir:
+                raise ValueError("pose_dir must be provided for skeleton model")
+            train_dataset = TennisPoseDataset(
+                args.feature_dir, args.pose_dir, split="train"
+            )
+            val_dataset = TennisPoseDataset(
+                args.feature_dir, args.pose_dir, split="val"
+            )
+        else:
+            train_dataset = TennisDataset(args.feature_dir, split="train")
+            val_dataset = TennisDataset(args.feature_dir, split="val")
 
     print(f"Train samples: {len(train_dataset)}")
     print(f"Val samples: {len(val_dataset)}")
@@ -167,7 +181,12 @@ def train(args):
         total = 0
 
         for i, (inputs, labels) in enumerate(train_loader):
-            inputs, labels = inputs.to(device), labels.to(device)
+            if isinstance(inputs, list) or isinstance(inputs, tuple):
+                # Handle multi-stream inputs (e.g., (rgb, pose))
+                inputs = [x.to(device) for x in inputs]
+            else:
+                inputs = inputs.to(device)
+            labels = labels.to(device)
 
             optimizer.zero_grad()
             outputs = model(inputs)
@@ -204,7 +223,11 @@ def train(args):
 
         with torch.no_grad():
             for inputs, labels in val_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
+                if isinstance(inputs, list) or isinstance(inputs, tuple):
+                    inputs = [x.to(device) for x in inputs]
+                else:
+                    inputs = inputs.to(device)
+                labels = labels.to(device)
 
                 outputs = model(inputs)
                 loss = criterion(torch.log(outputs + 1e-8), labels)
@@ -305,7 +328,7 @@ if __name__ == "__main__":
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention"],
+        choices=["baseline", "attention", "skeleton"],
         help="Type of model to train",
     )
 
@@ -315,6 +338,12 @@ if __name__ == "__main__":
         type=str,
         default="data/features",
         help="Path to pre-extracted features",
+    )
+    parser.add_argument(
+        "--pose_dir",
+        type=str,
+        default="data/pose_features",
+        help="Path to pre-extracted pose features (required for skeleton model)",
     )
     parser.add_argument(
         "--checkpoint_dir",

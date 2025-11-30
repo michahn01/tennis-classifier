@@ -128,3 +128,74 @@ class TennisDataset(Dataset):
         feature_path, label = self.samples[idx]
         features = torch.load(feature_path)
         return features, label
+
+
+class TennisPoseDataset(Dataset):
+    """
+    Dataset for Tennis Stroke Classification with Pose.
+    Loads pre-extracted RGB features and Pose features.
+    """
+
+    CLASS_MAPPING = TennisDataset.CLASS_MAPPING
+
+    def __init__(self, feature_dir, pose_dir, split="train", samples=None):
+        """
+        Args:
+            feature_dir: Directory containing processed RGB features.
+            pose_dir: Directory containing processed Pose features.
+            split: 'train', 'val', or 'test'.
+        """
+        self.feature_dir = feature_dir
+        self.pose_dir = pose_dir
+        self.split = split
+
+        self.classes = list(self.CLASS_MAPPING.keys())
+        self.class_to_idx = {cls: i for i, cls in enumerate(self.classes)}
+
+        # We load samples based on RGB features, assuming Pose features exist for them
+        self.samples = samples if samples is not None else self._load_samples()
+
+    def _load_samples(self):
+        samples = []
+        split_dir = os.path.join(self.feature_dir, self.split)
+
+        if not os.path.exists(split_dir):
+            print(f"Warning: Split directory not found: {split_dir}")
+            return samples
+
+        for class_name in self.classes:
+            class_dir = os.path.join(split_dir, class_name)
+            if not os.path.isdir(class_dir):
+                continue
+
+            class_idx = self.class_to_idx[class_name]
+
+            for f in os.listdir(class_dir):
+                if f.endswith(".pt"):
+                    rgb_path = os.path.join(class_dir, f)
+                    # Construct corresponding pose path
+                    # RGB: data/features/split/class/file.pt
+                    # Pose: data/pose_features/split/class/file.pt
+                    pose_path = os.path.join(
+                        self.pose_dir, self.split, class_name, f
+                    )
+                    
+                    # Only add if pose file exists
+                    if os.path.exists(pose_path):
+                        samples.append(((rgb_path, pose_path), class_idx))
+                    else:
+                        print(f"Warning: Pose file not found for {rgb_path}")
+                        pass
+
+        return samples
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        (rgb_path, pose_path), label = self.samples[idx]
+        
+        rgb_features = torch.load(rgb_path)
+        pose_features = torch.load(pose_path)
+        
+        return (rgb_features, pose_features), label

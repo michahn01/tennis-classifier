@@ -88,7 +88,7 @@ def search():
         "--model_type",
         type=str,
         required=True,
-        choices=["baseline", "attention"],
+        choices=["baseline", "attention", "skeleton"],
         help="Type of model to search for",
     )
     parser.add_argument(
@@ -100,6 +100,12 @@ def search():
     parser.add_argument(
         "--k_folds", type=int, default=0, help="Number of folds for CV (0 to disable)"
     )
+    parser.add_argument(
+        "--pose_dir",
+        type=str,
+        default="data/pose_features",
+        help="Path to pre-extracted pose features (required for skeleton model)",
+    )
     # device argument is removed/ignored as we manage devices internally
 
     script_args = parser.parse_args()
@@ -108,6 +114,7 @@ def search():
     defaults = {
         "model_type": script_args.model_type,
         "feature_dir": script_args.feature_dir,
+        "pose_dir": script_args.pose_dir,
         "checkpoint_dir": f"tennis/{script_args.model_type}/models",
         "epochs": 300,
         "batch_size": 8,
