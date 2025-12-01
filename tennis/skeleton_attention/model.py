@@ -1,11 +1,11 @@
-"""LSTM-based model augmented with (attention on RGB) + (pose information)."""
+"""LSTM-based model augmented with (attention on RGB) + (attention on pose information)."""
 
 import torch
 import torch.nn as nn
 
 
 class SkeletonAttentionTennisClassifier(nn.Module):
-    """LSTM-based model augmented with (attention on RGB) + (pose information).
+    """LSTM-based model augmented with (attention on RGB) + (attention on pose information).
 
     Uses RGB (LSTM) + Pose (1D CNN).
     """
@@ -43,8 +43,10 @@ class SkeletonAttentionTennisClassifier(nn.Module):
             nn.GroupNorm(1, 64),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.AdaptiveAvgPool1d(1),
-        )
+        )  # outputs (B, 64, T)
+
+        # Attention for Pose
+        self.pose_attention = Attention(hidden_size=64)
 
         # Fusion
         fusion_dim = lstm_hidden_size + 64
@@ -75,8 +77,18 @@ class SkeletonAttentionTennisClassifier(nn.Module):
 
         # Process pose data
         pose_x = pose_x.permute(0, 2, 1)
-        pose_feat = self.pose_cnn(pose_x)
-        pose_feat = pose_feat.squeeze(2)
+        pose_feat = self.pose_cnn(pose_x) # yields (B, 64, T)
+        pose_feat = pose_feat.permute(0, 2, 1) # transpose to (B, T, 64)
+
+        # Pose Attention
+        # (B, T, 64) to (B, T, 1)
+        pose_attn_scores = self.pose_attention(pose_feat)
+
+        # Get attention weights. (B, T, 1) to (B, T, 1).
+        pose_attn_weights = torch.softmax(pose_attn_scores, dim=1)
+
+        # Get a weighted sum of the original pose information. (B, T, 64) to (B, 64).
+        pose_feat = torch.sum(pose_attn_weights * pose_feat, dim=1)
 
         # Concatenate them and pass them through the same FC layer
         combined = torch.cat((rgb_feat, pose_feat), dim=1)
