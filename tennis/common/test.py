@@ -28,7 +28,6 @@ def test(args):
         raise FileNotFoundError(f"Best model not found at {model_path}")
 
     # Dataset
-    # Dataset
     DatasetClass = get_dataset_class(args.model_type)
     if requires_pose(args.model_type):
         if not args.pose_dir:

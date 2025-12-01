@@ -1,16 +1,11 @@
-"""
-Revamped Baseline Model: Matches LRCNN architecture
-"""
+"""Baseline LSTM-based model."""
 
 import torch
 import torch.nn as nn
 
 
 class TennisClassifier(nn.Module):
-    """
-    Revamped Baseline: LRCNN-like architecture.
-    Input (B, T, 2048) -> Dropout -> LSTM -> Dropout -> FC -> Softmax -> Mean -> Output (B, 6)
-    """
+    """Baseline: LSTM over features from RGB videos."""
 
     def __init__(
         self,
@@ -37,20 +32,36 @@ class TennisClassifier(nn.Module):
         self.softmax = nn.Softmax(dim=2)
 
     def forward(self, x):
-        """
+        """Forward pass of the model.
+
         Args:
-            x: (B, T, 2048) - Pre-extracted features
+            x (B, T, 2048): Pre-extracted features of RGB videos
+
         Returns:
-            avg_probs: (B, num_classes) - Averaged probabilities across time
+            avg_probs (B, num_classes): Prediced probabilities for each class
         """
+        # Apply dropout to inputs
+        # (B, T, 2048) to (B, T, 2048)
         x = self.input_dropout(x)
+
+        # Run entire sequence through LSTM cells
+        # (B, T, 2048) to (B, T, lstm_hidden_size)
         lstm_out, _ = self.lstm(x)
+
+        # Apply dropout to hidden states
+        # (B, T, lstm_hidden_size) to (B, T, lstm_hidden_size)
         lstm_out = self.output_dropout(lstm_out)
 
+        # Pass through a fully-connected layer to get logits
+        # (B, T, lstm_hidden_size) to (B, T, num_classes)
         logits = self.fc(lstm_out)
+
+        # Softmax the class logits
+        # (B, T, num_classes) to (B, T, num_classes)
         probs = self.softmax(logits)
 
         # Average probabilities across time
+        # (B, T, num_classes) to (B, num_classes)
         avg_probs = torch.mean(probs, dim=1)
 
         return avg_probs

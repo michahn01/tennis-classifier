@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 import tennis.common.config as config
 
-matplotlib.use("Agg")  # Use non-interactive backend
+# Use non-interactive backend
+matplotlib.use("Agg")
 
 
 def train(args):
@@ -34,9 +35,7 @@ def train(args):
 
         print(f"Running K-Fold CV: Fold {args.fold_index + 1}/{args.k_folds}")
 
-        # Load all samples from train_val (or train + val)
-        # We use TennisDataset helper to load raw samples without initializing the full dataset yet
-        # Load all samples from train_val (or train + val)
+        # Load all samples from train_val.
         # We use TennisDataset helper to load raw samples without initializing the full dataset yet
         DatasetClass = get_dataset_class(args.model_type)
         if requires_pose(args.model_type):
@@ -127,7 +126,6 @@ def train(args):
             )
 
     else:
-        # Standard split
         # Standard split
         DatasetClass = get_dataset_class(args.model_type)
         if requires_pose(args.model_type):

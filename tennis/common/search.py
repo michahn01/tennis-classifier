@@ -16,12 +16,10 @@ print_lock = multiprocessing.Lock()
 
 
 def worker(device_queue, task_queue, result_queue, log_dir):
-    """
-    Worker process that picks up tasks and runs them on an available device.
-    """
+    """Worker process that picks up tasks and runs them on an available device."""
     while True:
         try:
-            # Get a task (non-blocking, or with timeout if we want to be safe)
+            # Get a task (non-blocking, or with timeout to be safe)
             task = task_queue.get(timeout=1)
         except queue.Empty:
             break
@@ -213,7 +211,7 @@ def search():
             task_queue.put((run_args_dict, config_name))
 
     # Start worker processes
-    # We start 4 * tasks_per_gpu workers.
+    # We start len(available_devices)=4 * tasks_per_gpu workers.
     # They will pull from task_queue until empty.
     processes = []
     for _ in range(len(available_devices) * tasks_per_gpu):

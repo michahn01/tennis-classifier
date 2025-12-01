@@ -1,10 +1,13 @@
+"""LSTM-based model augmented with pose information."""
+
 import torch
 import torch.nn as nn
 
 
 class SkeletonTennisClassifier(nn.Module):
-    """
-    Multi-stream classifier: RGB (LSTM) + Pose (1D CNN).
+    """LSTM-based model augmented with pose information.
+
+    Uses RGB (LSTM) + Pose (1D CNN).
     """
 
     def __init__(
@@ -35,14 +38,14 @@ class SkeletonTennisClassifier(nn.Module):
         self.pose_cnn = nn.Sequential(
             # conv, norm, activation, dropout
             nn.Conv1d(pose_input_dim, 32, kernel_size=3, padding=1),
-            # Note: GroupNorm(1, ...) is equivalent to LayerNorm but we use GroupNorm
-            # instead because LayerNorm expects (B, T, C) but we have (B, C, T)
             nn.GroupNorm(1, 32),
             nn.ReLU(),
             nn.Dropout(dropout),
-            # now we repeat that pattern. the intent is to learn
-            # features hierarchically.
-            nn.Conv1d(32, 64, kernel_size=3, padding=1),
+            # Now we repeat the above pattern. The intent is to learn features
+            # hierarchically (i.e., learn higher level features this time).
+            nn.Conv1d(
+                32, 64, kernel_size=3, padding=1
+            ),  # more output channels this time though
             nn.GroupNorm(1, 64),
             nn.ReLU(),
             nn.Dropout(dropout),
@@ -50,37 +53,50 @@ class SkeletonTennisClassifier(nn.Module):
             nn.AdaptiveAvgPool1d(1),
         )  # will output (B, 64, 1)
 
-        # Fusion
-        # RGB LSTM output: (B, T, H) -> Mean pooling -> (B, H)
+        # Fusion of RGB stream and Pose stream
         fusion_dim = lstm_hidden_size + 64
         self.fc = nn.Linear(fusion_dim, num_classes)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
-        """
+        """Forward pass of the model.
+
         Args:
-            x: Tuple (rgb_features, pose_features)
+            x: Tuple (rgb_features, pose_features) where
                rgb_features: (B, T, 2048)
                pose_features: (B, T, 99)
+
+        Returns:
+            avg_probs (B, num_classes): Prediced probabilities for each class
         """
         rgb_x, pose_x = x
 
-        # First, do the RGB Stream
+        # ********** First, do the RGB stream **********
+        # (B, T, 2048) to (B, T, 2048)
         rgb_x = self.rgb_input_dropout(rgb_x)
-        rgb_out, _ = self.rgb_lstm(rgb_x)  # (B, T, H)
+
+        # (B, T, 2048) to (B, T, lstm_hidden_size)
+        rgb_out, _ = self.rgb_lstm(rgb_x)
+
+        # (B, T, lstm_hidden_size) to (B, T, lstm_hidden_size)
         rgb_out = self.rgb_output_dropout(rgb_out)
 
-        # Temporal Average Pooling for RGB
-        # We'll support an attention-augmented variant too
-        rgb_feat = torch.mean(rgb_out, dim=1)  # (B, H)
+        # Temporal average pooling for RGB
+        # i.e., we average information across frames
+        # (B, T, lstm_hidden_size) to (B, lstm_hidden_size)
+        rgb_feat = torch.mean(rgb_out, dim=1)
 
-        # Then, do the pose stream
+        # ********** Then, do the Pose stream **********
         # Permute for Conv1d: (B, T, 99) to (B, 99, T)
         pose_x = pose_x.permute(0, 2, 1)
-        pose_feat = self.pose_cnn(pose_x)  # (B, 128, 1)
-        pose_feat = pose_feat.squeeze(2)  # (B, 128)
 
-        # Finally, fuse the features
+        # Apply the 2 x (conv, norm, act, dropout) + (pool) pipeline
+        pose_feat = self.pose_cnn(pose_x)
+
+        # (B, 64, 1) to (B, 64)
+        pose_feat = pose_feat.squeeze(2)
+
+        # ********** Finally, fuse the features **********
         combined = torch.cat((rgb_feat, pose_feat), dim=1)
         logits = self.fc(combined)
         probs = self.softmax(logits)

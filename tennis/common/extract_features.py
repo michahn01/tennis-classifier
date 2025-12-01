@@ -12,9 +12,7 @@ from tennis.dataset import VideoDataset, TennisDataset
 
 
 def get_samples(data_dir, only_experts=False):
-    """
-    Scans the data directory and returns a list of (video_path, label_idx) tuples.
-    """
+    """Scans the data directory and returns a list of (video_path, label_idx) tuples."""
     samples = []
     subdir_to_class = {}
     for cls, subdirs in TennisDataset.CLASS_MAPPING.items():

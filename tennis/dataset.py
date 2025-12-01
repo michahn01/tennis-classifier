@@ -6,8 +6,8 @@ from torch.utils.data import Dataset
 
 
 class VideoDataset(Dataset):
-    """
-    Dataset for loading raw video frames.
+    """Dataset for loading raw video frames.
+
     Used by extract_features.py.
     """
 
@@ -72,8 +72,8 @@ class VideoDataset(Dataset):
 
 
 class TennisDataset(Dataset):
-    """
-    Dataset for Tennis Stroke Classification.
+    """Dataset for Tennis Stroke Classification.
+
     Loads pre-extracted features from disk.
     """
 
@@ -131,8 +131,8 @@ class TennisDataset(Dataset):
 
 
 class TennisPoseDataset(Dataset):
-    """
-    Dataset for Tennis Stroke Classification with Pose.
+    """Dataset for Tennis Stroke Classification with Pose.
+
     Loads pre-extracted RGB features and Pose features.
     """
 

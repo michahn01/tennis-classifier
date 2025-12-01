@@ -7,50 +7,7 @@ import mediapipe as mp
 
 
 def get_pose_connections():
-    try:
-        return mp.solutions.pose.POSE_CONNECTIONS
-    except AttributeError:
-        # Fallback if mp.solutions.pose is not available directly
-        # Standard MediaPipe Pose connections
-        return frozenset(
-            [
-                (0, 1),
-                (1, 2),
-                (2, 3),
-                (3, 7),
-                (0, 4),
-                (4, 5),
-                (5, 6),
-                (6, 8),
-                (9, 10),
-                (11, 12),
-                (11, 13),
-                (13, 15),
-                (15, 17),
-                (15, 19),
-                (15, 21),
-                (17, 19),
-                (12, 14),
-                (14, 16),
-                (16, 18),
-                (16, 20),
-                (16, 22),
-                (18, 20),
-                (11, 23),
-                (12, 24),
-                (23, 24),
-                (23, 25),
-                (24, 26),
-                (25, 27),
-                (26, 28),
-                (27, 29),
-                (28, 30),
-                (29, 31),
-                (30, 32),
-                (27, 31),
-                (28, 32),
-            ]
-        )
+    return mp.solutions.pose.POSE_CONNECTIONS
 
 
 def draw_pose_on_image(image, landmarks, connections):
@@ -100,8 +57,7 @@ def visualize_pose(pt_file, output_dir):
 
     # Video settings
     width, height = 640, 480
-    fps = 10  # Adjust as needed, maybe 30? extract_pose samples 32 frames, original video might be longer.
-    # If we assume the 32 frames represent the whole action, 10fps makes it ~3 seconds.
+    fps = 10
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
