@@ -77,8 +77,8 @@ class SkeletonAttentionTennisClassifier(nn.Module):
 
         # Process pose data
         pose_x = pose_x.permute(0, 2, 1)
-        pose_feat = self.pose_cnn(pose_x) # yields (B, 64, T)
-        pose_feat = pose_feat.permute(0, 2, 1) # transpose to (B, T, 64)
+        pose_feat = self.pose_cnn(pose_x)  # yields (B, 64, T)
+        pose_feat = pose_feat.permute(0, 2, 1)  # transpose to (B, T, 64)
 
         # Pose Attention
         # (B, T, 64) to (B, T, 1)
