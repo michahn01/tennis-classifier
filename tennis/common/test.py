@@ -3,6 +3,11 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import classification_report, confusion_matrix
+import numpy as np
+
 from tennis.common.model_utils import (
     get_model_class,
     get_dataset_class,
@@ -10,6 +15,7 @@ from tennis.common.model_utils import (
     get_model_choices,
 )
 import tennis.common.config as config
+from tennis.dataset import TennisDataset
 
 
 def test(args):
@@ -65,8 +71,8 @@ def test(args):
     model.eval()
 
     # Evaluation
-    correct = 0
-    total = 0
+    all_preds = []
+    all_labels = []
 
     with torch.no_grad():
         for inputs, labels in test_loader:
@@ -78,10 +84,37 @@ def test(args):
 
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
 
-    acc = 100 * correct / total if total > 0 else 0
+    # Metrics
+    class_names = list(TennisDataset.CLASS_MAPPING.keys())
+    
+    print("\nClassification Report:")
+    print(classification_report(all_labels, all_preds, target_names=class_names, digits=4))
+
+    # Confusion Matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        cm, 
+        annot=True, 
+        fmt="d", 
+        cmap="Blues", 
+        xticklabels=class_names, 
+        yticklabels=class_names
+    )
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix")
+    
+    save_path = os.path.join(args.checkpoint_dir, "confusion_matrix.png")
+    plt.savefig(save_path)
+    print(f"Confusion matrix saved to {save_path}")
+    plt.close()
+
+    acc = 100 * np.sum(np.array(all_preds) == np.array(all_labels)) / len(all_labels)
     print(f"Test Accuracy: {acc:.2f}%")
 
 

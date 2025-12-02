@@ -13,6 +13,7 @@ dependencies = [
     "opencv-python",
     "matplotlib",
     "mediapipe",
+    "seaborn",
 ]
 
 [project.optional-dependencies]
