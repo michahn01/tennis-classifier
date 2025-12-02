@@ -24,6 +24,8 @@ def test(args):
     )
     print(f"Using device: {device}")
 
+
+
     # Set default model path if not provided
     if not args.model_path:
         # Try to find a default model in the standard location
@@ -117,7 +119,10 @@ def test(args):
     plt.title("Confusion Matrix")
     
     # Save plot
-    vis_dir = os.path.join("visualizations", args.model_type)
+    if args.save_dir:
+        vis_dir = args.save_dir
+    else:
+        vis_dir = os.path.join("visualizations", args.model_type)
     os.makedirs(vis_dir, exist_ok=True)
     
     plot_filename = f"confusion_matrix_h{args.hidden_size}_l{args.lstm_layers}_d{args.dropout}.png"
@@ -201,6 +206,12 @@ if __name__ == "__main__":
         "--infer_params",
         action="store_true",
         help="Infer model parameters from model_path filename",
+    )
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        default=None,
+        help="Directory to save visualizations and results",
     )
 
     args = parser.parse_args()

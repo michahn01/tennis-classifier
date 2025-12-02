@@ -25,6 +25,8 @@ def train(args):
         args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu")
     )
     print(f"Using device: {device}")
+    
+
 
     # Datasets
     if args.k_folds > 0:

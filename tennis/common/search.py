@@ -112,6 +112,12 @@ def search():
         default=config.DEFAULT_POSE_DIR,
         help="Path to pre-extracted pose features (required for skeleton model)",
     )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=None,
+        help="Directory to save results and logs (default: results/{model_type}/)",
+    )
     # device argument is removed/ignored as we manage devices internally
 
     script_args = parser.parse_args()
@@ -134,10 +140,40 @@ def search():
         "dropout": config.DEFAULT_DROPOUT,
     }
 
-    # Create search_logs directory
-    log_dir = "search_logs"
+    # Create output directory
+    if script_args.output_dir:
+        output_dir = script_args.output_dir
+    else:
+        output_dir = f"results/{script_args.model_type}/"
+
+    if os.path.exists(output_dir):
+        print(f"Clearing existing output directory: {output_dir}")
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Results will be saved to: {os.path.abspath(output_dir)}")
+
+    # Setup main process logging
+    log_file_path = os.path.join(output_dir, "search.log")
+    # We will tee the output to both stdout and the log file
+    class Tee(object):
+        def __init__(self, *files):
+            self.files = files
+        def write(self, obj):
+            for f in self.files:
+                f.write(obj)
+                f.flush() # Ensure immediate write
+        def flush(self):
+            for f in self.files:
+                f.flush()
+
+    f_log = open(log_file_path, 'w')
+    original_stdout = sys.stdout
+    sys.stdout = Tee(sys.stdout, f_log)
+    
+    # Worker logs directory
+    log_dir = os.path.join(output_dir, "worker_logs")
     os.makedirs(log_dir, exist_ok=True)
-    print(f"Logs will be saved to: {os.path.abspath(log_dir)}")
+    print(f"Worker logs will be saved to: {os.path.abspath(log_dir)}")
 
     # Search space
     hidden_sizes = config.SEARCH_SPACE["hidden_sizes"]
@@ -291,7 +327,79 @@ def search():
         print(f"(Source: {best_model_src})")
     else:
         print("Error: Could not locate best model file.")
+
+    
+    # Run test on best model
+    if best_model_src and os.path.exists(best_model_src):
+        print("\n" + "=" * 30)
+        print("Running Test on Best Model")
+        print("=" * 30)
+        
+        from tennis.common.test import test
+        
+        # Construct args for test
+        test_args = SimpleNamespace(
+            model_type=script_args.model_type,
+            feature_dir=script_args.feature_dir,
+            pose_dir=script_args.pose_dir,
+            model_path=best_model_src, # Use the source file directly or the copied one? Let's use source to be safe/direct.
+            # Actually, let's use the copied one if we want to verify that too, but source is fine.
+            # Wait, the prompt says "test the model on the file of the best model found".
+            # Let's use the one we just identified.
+            
+            # Hyperparams
+            hidden_size=best_params["hidden_size"],
+            lstm_layers=best_params["lstm_layers"],
+            dropout=best_params["dropout"],
+            
+            # Other defaults
+            batch_size=config.DEFAULT_BATCH_SIZE,
+            num_workers=config.DEFAULT_NUM_WORKERS,
+            device=None, # Let test.py decide or pass one if we want
+            infer_params=False,
+            save_dir=output_dir # Save confusion matrix etc to the main output dir
+        )
+        
+        # Capture test output to log file
+        test_log_path = os.path.join(output_dir, "test_results.log")
+        
+        # We need to capture the output of the test function. 
+        # Since we are already teeing stdout to search.log, we might want to separate this.
+        # But the requirement says "The text output/results of this test should go into a separate log file".
+        # So we should temporarily redirect stdout to ONLY the test log file.
+        
+        try:
+            with open(test_log_path, "w") as test_log_file:
+                # Temporarily redirect stdout to the test log file
+                # We also want to see it in the main log/console? 
+                # "The text output/results of this test should go into a separate log file"
+                # It doesn't explicitly say it shouldn't be in the main log, but usually "separate" implies distinct.
+                # However, for debugging it's nice to see. 
+                # Let's just redirect to the file as requested.
+                
+                sys.stdout = test_log_file
+                test(test_args)
+        except Exception as e:
+             sys.stdout = original_stdout # Restore first
+             # We are still wrapped in the Tee from earlier, so this restores to (console + search.log)
+             # Wait, original_stdout was the ACTUAL console. 
+             # We want to restore to the Tee object if we want to continue logging to search.log?
+             # Actually, we are at the end of the script.
+             
+             # Let's restore to the Tee object
+             sys.stdout = Tee(original_stdout, f_log)
+             print(f"Error running test: {e}")
+             import traceback
+             traceback.print_exc()
+        finally:
+             # Restore stdout to the Tee object (or original if we are done)
+             sys.stdout = Tee(original_stdout, f_log)
+
     print("=" * 30)
+    
+    # Close the search log file
+    sys.stdout = original_stdout
+    f_log.close()
 
 
 if __name__ == "__main__":
