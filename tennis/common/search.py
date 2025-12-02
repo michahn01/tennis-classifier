@@ -278,7 +278,14 @@ def search():
     if best_model_src and os.path.exists(best_model_src):
         target_dir = f"tennis/{script_args.model_type}/models"
         os.makedirs(target_dir, exist_ok=True)
-        target_path = os.path.join(target_dir, "total_best_model.pth")
+        
+        # Construct filename with hyperparams
+        h = best_params["hidden_size"]
+        l_num = best_params["lstm_layers"]
+        d = best_params["dropout"]
+        target_filename = f"best_model_h{h}_l{l_num}_d{d}.pth"
+        
+        target_path = os.path.join(target_dir, target_filename)
         shutil.copy2(best_model_src, target_path)
         print(f"Best model saved to: {target_path}")
         print(f"(Source: {best_model_src})")

@@ -24,14 +24,21 @@ def test(args):
     )
     print(f"Using device: {device}")
 
-    # Set default checkpoint dir if not provided
-    if not args.checkpoint_dir:
-        args.checkpoint_dir = f"tennis/{args.model_type}/models"
+    # Set default model path if not provided
+    if not args.model_path:
+        # Try to find a default model in the standard location
+        default_path = f"tennis/{args.model_type}/models/best_model.pth"
+        if os.path.exists(default_path):
+            args.model_path = default_path
+        else:
+             # If we can't find a default, we can't proceed without a path
+             pass 
 
-    # Check for model checkpoint
-    model_path = os.path.join(args.checkpoint_dir, "best_model.pth")
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Best model not found at {model_path}")
+    if not args.model_path:
+         raise ValueError("model_path must be provided")
+
+    if not os.path.exists(args.model_path):
+        raise FileNotFoundError(f"Model file not found at {args.model_path}")
 
     # Dataset
     DatasetClass = get_dataset_class(args.model_type)
@@ -66,8 +73,8 @@ def test(args):
     ).to(device)
 
     # Load weights
-    print(f"Loading model from {model_path}")
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    print(f"Loading model from {args.model_path}")
+    model.load_state_dict(torch.load(args.model_path, map_location=device))
     model.eval()
 
     # Evaluation
@@ -149,10 +156,10 @@ if __name__ == "__main__":
         help="Path to pre-extracted pose features (required for skeleton model)",
     )
     parser.add_argument(
-        "--checkpoint_dir",
+        "--model_path",
         type=str,
         default=None,
-        help="Directory containing best_model.pth (default: tennis/<model_type>/models)",
+        help="Path to model file (e.g., tennis/baseline/models/best_model_h512_l2_d0.5.pth)",
     )
 
     # Model arguments (must match training)
@@ -193,21 +200,22 @@ if __name__ == "__main__":
     parser.add_argument(
         "--infer_params",
         action="store_true",
-        help="Infer model parameters from checkpoint_dir path",
+        help="Infer model parameters from model_path filename",
     )
 
     args = parser.parse_args()
 
     if args.infer_params:
-        if not args.checkpoint_dir:
+        if not args.model_path:
             raise ValueError(
-                "--checkpoint_dir must be specified when using --infer_params"
+                "--model_path must be specified when using --infer_params"
             )
 
         import re
 
-        # Expecting format like .../search_h512_l2_d0.5/...
-        match = re.search(r"search_h(\d+)_l(\d+)_d([\d.]+)", args.checkpoint_dir)
+        # Expecting format like .../best_model_h512_l2_d0.5.pth
+        # Or even just finding the pattern in the string
+        match = re.search(r"h(\d+)_l(\d+)_d([\d.]+)", args.model_path)
         if match:
             args.hidden_size = int(match.group(1))
             args.lstm_layers = int(match.group(2))
@@ -216,6 +224,6 @@ if __name__ == "__main__":
                 f"Inferred params: hidden_size={args.hidden_size}, lstm_layers={args.lstm_layers}, dropout={args.dropout}"
             )
         else:
-            raise ValueError(f"Could not infer params from path: {args.checkpoint_dir}")
+            raise ValueError(f"Could not infer params from path: {args.model_path}")
 
     test(args)
