@@ -109,7 +109,13 @@ def test(args):
     plt.ylabel("True")
     plt.title("Confusion Matrix")
     
-    save_path = os.path.join(args.checkpoint_dir, "confusion_matrix.png")
+    # Save plot
+    vis_dir = os.path.join("visualizations", args.model_type)
+    os.makedirs(vis_dir, exist_ok=True)
+    
+    plot_filename = f"confusion_matrix_h{args.hidden_size}_l{args.lstm_layers}_d{args.dropout}.png"
+    save_path = os.path.join(vis_dir, plot_filename)
+    
     plt.savefig(save_path)
     print(f"Confusion matrix saved to {save_path}")
     plt.close()
