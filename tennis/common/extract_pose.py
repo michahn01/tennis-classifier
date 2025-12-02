@@ -69,6 +69,116 @@ def download_model(model_path):
         print("Download complete.")
 
 
+def extract_pose_from_video(video_path, num_frames, landmarker=None):
+    """
+    Extracts pose landmarks from a single video.
+
+    Args:
+        video_path (str): Path to the video file.
+        num_frames (int): Number of frames to sample.
+        landmarker (mp.tasks.vision.PoseLandmarker, optional): Pre-initialized landmarker.
+                                                               If None, initializes a new one.
+
+    Returns:
+        pose_tensor (torch.Tensor): (T, 99) tensor of pose landmarks.
+    """
+    should_close_landmarker = False
+    if landmarker is None:
+        model_path = "pose_landmarker_full.task"
+        download_model(model_path)
+        
+        BaseOptions = mp.tasks.BaseOptions
+        PoseLandmarker = mp.tasks.vision.PoseLandmarker
+        PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
+        VisionRunningMode = mp.tasks.vision.RunningMode
+
+        options = PoseLandmarkerOptions(
+            base_options=BaseOptions(
+                model_asset_path=model_path, delegate=BaseOptions.Delegate.GPU
+            ),
+            running_mode=VisionRunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=0.5,
+            min_pose_presence_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        landmarker = PoseLandmarker.create_from_options(options)
+        should_close_landmarker = True
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        if should_close_landmarker:
+            landmarker.close()
+        raise ValueError(f"Error opening video file {video_path}")
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    # Handle edge case where video might be shorter than num_frames or empty
+    if total_frames <= 0:
+         # Try to read one frame to see if it works, or just fail
+         # For robustness, let's just try to read all frames
+         frames_list = []
+         while True:
+             ret, frame = cap.read()
+             if not ret:
+                 break
+             frames_list.append(frame)
+         total_frames = len(frames_list)
+         cap.release()
+         
+         if total_frames == 0:
+             if should_close_landmarker:
+                 landmarker.close()
+             raise ValueError(f"Video has 0 frames: {video_path}")
+         
+         cap = cv2.VideoCapture(video_path)
+
+    indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+
+    pose_features = []
+    current_frame = 0
+    extracted_count = 0
+
+    while cap.isOpened() and extracted_count < num_frames:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        if current_frame in indices:
+            # Convert to RGB for MediaPipe
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+
+            detection_result = landmarker.detect(mp_image)
+
+            if detection_result.pose_landmarks:
+                # Extract 33 landmarks (x, y, z) -> 99 features
+                landmarks = []
+                for lm in detection_result.pose_landmarks[0]:
+                    landmarks.extend([lm.x, lm.y, lm.z])
+                pose_features.append(landmarks)
+            else:
+                # If no pose detected, use zeros
+                pose_features.append([0.0] * 99)
+
+            extracted_count += 1
+
+        current_frame += 1
+
+    cap.release()
+    
+    if should_close_landmarker:
+        landmarker.close()
+
+    # Pad if needed
+    while len(pose_features) < num_frames:
+        pose_features.append([0.0] * 99)
+
+    # Convert to tensor (T, 99)
+    pose_tensor = torch.tensor(pose_features, dtype=torch.float32)
+    return pose_tensor
+
+
 def extract_pose(args):
     model_path = "pose_landmarker_full.task"
     download_model(model_path)
@@ -179,58 +289,13 @@ def extract_pose(args):
                 if i % 10 == 0:
                     print(f"Processing video {i}/{len(samples)}")
 
-                cap = cv2.VideoCapture(video_path)
-                if not cap.isOpened():
-                    print(f"Error opening video file {video_path}")
+                try:
+                    pose_tensor = extract_pose_from_video(
+                        video_path, args.num_frames, landmarker
+                    )
+                except Exception as e:
+                    print(f"Error processing {video_path}: {e}")
                     continue
-
-                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-                # Uniform sampling
-                indices = np.linspace(0, total_frames - 1, args.num_frames, dtype=int)
-
-                pose_features = []
-
-                current_frame = 0
-                extracted_count = 0
-
-                while cap.isOpened() and extracted_count < args.num_frames:
-                    ret, frame = cap.read()
-                    if not ret:
-                        break
-
-                    if current_frame in indices:
-                        # Convert to RGB for MediaPipe
-                        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        mp_image = mp.Image(
-                            image_format=mp.ImageFormat.SRGB, data=frame_rgb
-                        )
-
-                        detection_result = landmarker.detect(mp_image)
-
-                        if detection_result.pose_landmarks:
-                            # Extract 33 landmarks (x, y, z) -> 99 features
-                            # detection_result.pose_landmarks is a list of lists (one per detected pose)
-                            landmarks = []
-                            for lm in detection_result.pose_landmarks[0]:
-                                landmarks.extend([lm.x, lm.y, lm.z])
-                            pose_features.append(landmarks)
-                        else:
-                            # If no pose detected, use zeros
-                            pose_features.append([0.0] * 99)
-
-                        extracted_count += 1
-
-                    current_frame += 1
-
-                cap.release()
-
-                # Pad if needed
-                while len(pose_features) < args.num_frames:
-                    pose_features.append([0.0] * 99)
-
-                # Convert to tensor (T, 99)
-                pose_tensor = torch.tensor(pose_features, dtype=torch.float32)
 
                 # Save
                 class_name = classes[label_idx]
@@ -240,7 +305,6 @@ def extract_pose(args):
 
                 os.makedirs(save_dir, exist_ok=True)
                 torch.save(pose_tensor, save_path)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

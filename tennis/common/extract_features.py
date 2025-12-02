@@ -57,6 +57,114 @@ def get_samples(data_dir, only_experts=False):
     return samples, classes
 
 
+def extract_features_from_video(
+    video_path, num_frames, device, model=None, transform=None
+):
+    """
+    Extracts ResNet50 features from a single video.
+
+    Args:
+        video_path (str): Path to the video file.
+        num_frames (int): Number of frames to sample.
+        device (torch.device): Device to run on.
+        model (nn.Module, optional): Pre-loaded ResNet50 model. If None, loads a new one.
+        transform (transforms.Compose, optional): Pre-defined transforms. If None, uses default.
+
+    Returns:
+        features (torch.Tensor): (T, 2048) tensor of features.
+    """
+    if model is None:
+        resnet = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        modules = list(resnet.children())[:-1]  # Remove FC layer
+        model = nn.Sequential(*modules).to(device)
+        model.eval()
+
+    if transform is None:
+        transform = transforms.Compose(
+            [
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                )
+            ]
+        )
+
+    # Load video using VideoDataset's logic (simplified here or reuse VideoDataset)
+    # Since VideoDataset is designed for lists of samples, we can just use it with a single sample
+    # But VideoDataset does a lot of overhead for a single video.
+    # Let's implement a lightweight loader here using cv2 directly, similar to VideoDataset but simpler.
+    import cv2
+    import numpy as np
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError(f"Could not open video: {video_path}")
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    # Handle edge case where video might be shorter than num_frames or empty
+    if total_frames <= 0:
+         # Try to read one frame to see if it works, or just fail
+         # For robustness, let's just try to read all frames
+         frames_list = []
+         while True:
+             ret, frame = cap.read()
+             if not ret:
+                 break
+             frames_list.append(frame)
+         total_frames = len(frames_list)
+         cap.release()
+         # Re-open if we need to seek, or just use the list
+         # If we read all into memory, might be heavy. 
+         # Let's stick to standard seeking if total_frames > 0
+         if total_frames == 0:
+             raise ValueError(f"Video has 0 frames: {video_path}")
+         
+         # If we read it all, use it
+         # But for consistency with standard flow:
+         cap = cv2.VideoCapture(video_path)
+
+    indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+    
+    frames_tensor = []
+    
+    for frame_idx in range(total_frames):
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        if frame_idx in indices:
+            # Preprocess frame
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = cv2.resize(frame, (224, 224))
+            frame = torch.from_numpy(frame).float() / 255.0
+            frame = frame.permute(2, 0, 1)  # (H, W, C) -> (C, H, W)
+            if transform:
+                frame = transform(frame)
+            frames_tensor.append(frame)
+            
+            if len(frames_tensor) >= num_frames:
+                break
+    
+    cap.release()
+
+    # Pad if needed
+    while len(frames_tensor) < num_frames:
+        frames_tensor.append(torch.zeros(3, 224, 224))
+
+    frames = torch.stack(frames_tensor) # (T, C, H, W)
+    frames = frames.unsqueeze(0).to(device) # (1, T, C, H, W)
+
+    B, T, C, H, W = frames.size()
+    
+    with torch.no_grad():
+        frames_flat = frames.view(B * T, C, H, W)
+        features_flat = model(frames_flat)
+        features_flat = features_flat.view(B * T, -1)
+        features = features_flat.view(B, T, -1) # (1, T, 2048)
+
+    return features.squeeze(0) # (T, 2048)
+
+
 def extract_features(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -216,7 +324,6 @@ def extract_features(args):
 
                     os.makedirs(save_dir, exist_ok=True)
                     torch.save(features[b].cpu(), save_path)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract features using ResNet50")
