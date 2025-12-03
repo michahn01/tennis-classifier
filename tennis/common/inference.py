@@ -40,7 +40,7 @@ class InferenceEngine:
         dropout = config.DEFAULT_DROPOUT
 
         import re
-        match = re.search(r"h(\d+)_l(\d+)_d([\d.]+)", model_weights_path)
+        match = re.search(r"h(\d+)_l(\d+)_d(\d+(?:\.\d+)?)", model_weights_path)
         if match:
             hidden_size = int(match.group(1))
             lstm_layers = int(match.group(2))

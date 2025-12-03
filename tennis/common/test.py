@@ -226,7 +226,7 @@ if __name__ == "__main__":
 
         # Expecting format like .../best_model_h512_l2_d0.5.pth
         # Or even just finding the pattern in the string
-        match = re.search(r"h(\d+)_l(\d+)_d([\d.]+)", args.model_path)
+        match = re.search(r"h(\d+)_l(\d+)_d(\d+(?:\.\d+)?)", args.model_path)
         if match:
             args.hidden_size = int(match.group(1))
             args.lstm_layers = int(match.group(2))
