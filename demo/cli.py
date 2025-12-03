@@ -6,17 +6,16 @@ import sys
 from datetime import datetime
 
 
-def record_video(output_dir, action_class):
+def record_video(output_dir):
     """Records video from webcam and saves it to output_dir."""
     
     # Create class directory
-    class_dir = os.path.join(output_dir, action_class)
-    os.makedirs(class_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
     
     # Generate filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{timestamp}.avi"
-    filepath = os.path.join(class_dir, filename)
+    filepath = os.path.join(output_dir, filename)
     
     # Open webcam
     cap = cv2.VideoCapture(0)
@@ -65,17 +64,14 @@ def run_command(args):
     print("Starting webcam...")
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    # Save to 'input' subdirectory to mimic the structure expected by extract_features
-    # even though 'input' might not be a valid class yet.
     output_dir = os.path.join(base_dir, "videos")
-    
-    record_video(output_dir, "input")
+
+    record_video(output_dir)
 
 def main():
     parser = argparse.ArgumentParser(description="Tennis Classifier CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
     
-    # 'run' command
     run_parser = subparsers.add_parser("run", help="Start video recording")
     run_parser.set_defaults(func=run_command)
     
