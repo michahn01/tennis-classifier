@@ -7,6 +7,7 @@ from tennis.common.model_utils import get_model_class, requires_pose
 from tennis.common.extract_features import extract_features_from_video
 from tennis.common.extract_pose import extract_pose_from_video
 from tennis.dataset import TennisDataset
+import tennis.common.config as config
 
 class InferenceEngine:
     def __init__(self, model_type, model_weights_path, device=None, num_frames=30):
@@ -33,9 +34,10 @@ class InferenceEngine:
         # Load Model Architecture
         model_class = get_model_class(model_type)
 
-        hidden_size = 256
-        lstm_layers = 1
-        dropout = 0.1
+        # Default values
+        hidden_size = config.DEFAULT_HIDDEN_SIZE
+        lstm_layers = config.DEFAULT_LSTM_LAYERS
+        dropout = config.DEFAULT_DROPOUT
 
         import re
         match = re.search(r"h(\d+)_l(\d+)_d([\d.]+)", model_weights_path)
@@ -43,9 +45,11 @@ class InferenceEngine:
             hidden_size = int(match.group(1))
             lstm_layers = int(match.group(2))
             dropout = float(match.group(3))
-            print(f"Inferred hyperparameters: hidden_size={hidden_size}, lstm_layers={lstm_layers}, dropout={dropout}")
+            print(
+                f"Inferred params: hidden_size={hidden_size}, lstm_layers={lstm_layers}, dropout={dropout}"
+            )
         else:
-            print("Could not infer hyperparameters from filename, using defaults.")
+            print(f"Could not infer params from path: {model_weights_path}, using defaults")
 
         self.model = model_class(
             num_classes=6,
