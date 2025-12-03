@@ -1,0 +1,20 @@
+Using device: cuda
+Test samples: 72
+Loading model from tennis/attention/models/search_h256_l1_d0.3/fold2/best_model.pth
+
+Classification Report:
+              precision    recall  f1-score   support
+
+    backhand     0.5625    1.0000    0.7200        18
+    forehand     0.9167    0.6111    0.7333        18
+     service     0.7500    0.5000    0.6000        18
+     bvolley     0.4286    0.5000    0.4615         6
+     fvolley     1.0000    0.5000    0.6667         6
+       smash     0.3333    0.3333    0.3333         6
+
+    accuracy                         0.6389        72
+   macro avg     0.6652    0.5741    0.5858        72
+weighted avg     0.7041    0.6389    0.6351        72
+
+Confusion matrix saved to results/attention/confusion_matrix_h256_l1_d0.3.png
+Test Accuracy: 63.89%

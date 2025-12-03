@@ -1,0 +1,49 @@
+Worker logs will be saved to: /home/michahn/dump/try/test/results/baseline/worker_logs
+Starting grid search with 18 combinations...
+
+==============================
+Search Complete
+==============================
+Config h128_l1_d0.1: Avg Acc = 68.44% (Runs: 6)
+Config h128_l1_d0.3: Avg Acc = 67.59% (Runs: 6)
+Config h128_l1_d0.5: Avg Acc = 67.36% (Runs: 6)
+Config h128_l2_d0.1: Avg Acc = 63.70% (Runs: 6)
+Config h128_l2_d0.3: Avg Acc = 61.42% (Runs: 6)
+Config h128_l2_d0.5: Avg Acc = 61.00% (Runs: 6)
+Config h256_l1_d0.1: Avg Acc = 66.13% (Runs: 6)
+Config h256_l1_d0.3: Avg Acc = 66.59% (Runs: 6)
+Config h256_l1_d0.5: Avg Acc = 66.63% (Runs: 6)
+Config h256_l2_d0.1: Avg Acc = 62.73% (Runs: 6)
+Config h256_l2_d0.3: Avg Acc = 61.23% (Runs: 6)
+Config h256_l2_d0.5: Avg Acc = 65.01% (Runs: 6)
+Config h512_l1_d0.1: Avg Acc = 66.17% (Runs: 6)
+Config h512_l1_d0.3: Avg Acc = 66.82% (Runs: 6)
+Config h512_l1_d0.5: Avg Acc = 66.32% (Runs: 6)
+Config h512_l2_d0.1: Avg Acc = 64.08% (Runs: 6)
+Config h512_l2_d0.3: Avg Acc = 63.31% (Runs: 6)
+Config h512_l2_d0.5: Avg Acc = 61.38% (Runs: 6)
+Best Validation Accuracy: 68.44%
+Best Hyperparameters:
+  model_type: baseline
+  feature_dir: data/features
+  pose_dir: data/pose_features
+  checkpoint_dir: tennis/baseline/models/search_h128_l1_d0.1/fold0
+  epochs: 300
+  batch_size: 8
+  lr: 0.001
+  weight_decay: 0.0001
+  num_workers: 4
+  device: cuda:0
+  hidden_size: 128
+  lstm_layers: 1
+  dropout: 0.1
+  k_folds: 6
+  fold_index: 0
+  plot_dir: results/baseline/worker_logs/search_h128_l1_d0.1_fold0_graphs
+Best model saved to: tennis/baseline/models/best_model_h128_l1_d0.1.pth
+(Source: tennis/baseline/models/search_h128_l1_d0.1/fold2/best_model.pth)
+
+==============================
+Running Test on Best Model
+==============================
+==============================

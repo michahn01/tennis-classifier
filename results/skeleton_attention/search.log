@@ -1,0 +1,49 @@
+Worker logs will be saved to: /home/michahn/dump/try/test/results/skeleton_attention/worker_logs
+Starting grid search with 18 combinations...
+
+==============================
+Search Complete
+==============================
+Config h128_l1_d0.1: Avg Acc = 84.38% (Runs: 6)
+Config h128_l1_d0.3: Avg Acc = 84.03% (Runs: 6)
+Config h128_l1_d0.5: Avg Acc = 84.07% (Runs: 6)
+Config h128_l2_d0.1: Avg Acc = 81.02% (Runs: 6)
+Config h128_l2_d0.3: Avg Acc = 80.40% (Runs: 6)
+Config h128_l2_d0.5: Avg Acc = 79.44% (Runs: 6)
+Config h256_l1_d0.1: Avg Acc = 82.60% (Runs: 6)
+Config h256_l1_d0.3: Avg Acc = 84.92% (Runs: 6)
+Config h256_l1_d0.5: Avg Acc = 83.49% (Runs: 6)
+Config h256_l2_d0.1: Avg Acc = 81.67% (Runs: 6)
+Config h256_l2_d0.5: Avg Acc = 79.32% (Runs: 6)
+Config h256_l2_d0.3: Avg Acc = 79.94% (Runs: 6)
+Config h512_l1_d0.1: Avg Acc = 83.45% (Runs: 6)
+Config h512_l1_d0.3: Avg Acc = 82.18% (Runs: 6)
+Config h512_l1_d0.5: Avg Acc = 82.56% (Runs: 6)
+Config h512_l2_d0.1: Avg Acc = 80.98% (Runs: 6)
+Config h512_l2_d0.3: Avg Acc = 80.79% (Runs: 6)
+Config h512_l2_d0.5: Avg Acc = 80.21% (Runs: 6)
+Best Validation Accuracy: 84.92%
+Best Hyperparameters:
+  model_type: skeleton_attention
+  feature_dir: data/features
+  pose_dir: data/pose_features
+  checkpoint_dir: tennis/skeleton_attention/models/search_h256_l1_d0.3/fold2
+  epochs: 300
+  batch_size: 8
+  lr: 0.001
+  weight_decay: 0.0001
+  num_workers: 4
+  device: cuda:3
+  hidden_size: 256
+  lstm_layers: 1
+  dropout: 0.3
+  k_folds: 6
+  fold_index: 2
+  plot_dir: results/skeleton_attention/worker_logs/search_h256_l1_d0.3_fold2_graphs
+Best model saved to: tennis/skeleton_attention/models/best_model_h256_l1_d0.3.pth
+(Source: tennis/skeleton_attention/models/search_h256_l1_d0.3/fold3/best_model.pth)
+
+==============================
+Running Test on Best Model
+==============================
+==============================
